@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CX Solution V47 | Operativo Pro</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Immediate Auth Check
+        if (!sessionStorage.getItem('cx_user')) {
+            window.location.href = 'login.html';
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darkbg: '#0f172a',
+                        sidebar: '#1e293b',
+                        card: '#334155',
+                        kia: '#ea0029',
+                        hyundai: '#002c5f'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Librerías -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden;
+            display: none;
+            /* Hidden until auth check in app.init() */
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        /* Modal Styles */
+        div:where(.swal2-container) div:where(.swal2-popup) {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 25px;
+            width: 600px !important;
+        }
+
+        .swal2-title {
+            color: white !important;
+            font-size: 1.2rem !important;
+            margin-bottom: 20px !important;
+        }
+
+        .swal2-html-container {
+            margin: 0 !important;
+            overflow: visible !important;
+            text-align: left !important;
+        }
+
+        /* Inputs Custom */
+        .custom-field {
+            background-color: #0f172a;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            width: 100%;
+            height: 2.5rem;
+            outline: none;
+            display: block;
+            transition: all 0.2s ease;
+        }
+
+        .custom-field:focus {
+            border-color: #6366f1;
+            /* ring: 1px #6366f1;*/
+        }
+
+        .field-error {
+            border-color: #ff4d4d !important;
+            background-color: rgba(255, 77, 77, 0.05) !important;
+            box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.2);
+        }
+
+        .text-error-msg {
+            color: #ff4d4d;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+            height: 18px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .text-error-msg.visible {
+            opacity: 1;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+
+        input[type="date"],
+        input[type="datetime-local"] {
+            color-scheme: dark;
+        }
+
+        .dash-date {
+            background: #334155;
+            border: 1px solid #475569;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            outline: none;
+            width: 100%;
+        }
+
+        /* KANBAN LAYOUT */
+        .kanban-wrapper {
+            display: flex;
+            gap: 0.8rem;
+            height: 100%;
+            width: 100%;
+            padding-bottom: 0.5rem;
+        }
+
+        .kanban-column {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            max-height: 100%;
+        }
+
+        .kanban-header {
+            padding: 0.75rem;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            border-radius: 0.75rem 0.75rem 0 0;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.05em;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kanban-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-height: 200px;
+        }
+
+        .kanban-card {
+            transition: transform 0.1s;
+            border-left-width: 4px;
+            cursor: grab;
+            background: #1e293b;
+            position: relative;
+            user-select: none;
+        }
+
+        .kanban-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .btn-active {
+            background: white;
+            color: #0f172a;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-inactive {
+            color: #94a3b8;
+        }
+
+        .action-btn {
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+
+        .action-btn:hover {
+            opacity: 1;
+        }
+
+        .chart-box {
+            height: 18rem;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 bg-sidebar border-r border-slate-700/50 flex flex-col z-20 shadow-2xl flex-shrink-0">
+        <div class="p-6 border-b border-slate-700/50 flex items-center gap-3">
+            <div
+                class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg border border-white/10">
+                CX</div>
+            <div>
+                <h1 class="font-bold text-white text-sm tracking-wide">CX Solution</h1>
+                <p class="text-[10px] text-slate-400">Panel Operativo <span
+                        class="text-indigo-400 font-bold ml-1">v.1.5</span></p>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-b border-slate-700/50">
+            <label class="text-[10px] uppercase text-slate-500 font-bold tracking-wider mb-2 block">Año Fiscal</label>
+            <select id="global-year" onchange="app.renderAll()"
+                class="w-full bg-slate-900 border border-slate-600 text-white text-sm rounded-lg p-2 focus:border-indigo-500 outline-none cursor-pointer">
+                <option value="all">Histórico Completo</option>
+                <option value="2026" selected>2026</option>
+                <option value="2027">2027</option>
+                <option value="2028">2028</option>
+                <option value="2029">2029</option>
+                <option value="2030">2030</option>
+                <option value="2031">2031</option>
+                <option value="2032">2032</option>
+                <option value="2033">2033</option>
+            </select>
+        </div>
+
+        <nav class="flex-1 px-4 space-y-2 mt-4">
+            <button onclick="app.nav('dashboard')" id="nav-dashboard"
+                class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-400 active-nav"><span
+                    class="material-icons-round">speed</span> Dashboard</button>
+            <button onclick="app.nav('it')" id="nav-it"
+                class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-400"><span
+                    class="material-icons-round">devices</span> Configuración IT</button>
+            <button onclick="app.nav('kanban')" id="nav-kanban"
+                class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-400"><span
+                    class="material-icons-round">view_kanban</span> Formación</button>
+            <button onclick="app.nav('informes')" id="nav-informes"
+                class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-400"><span
+                    class="material-icons-round">folder_open</span> Datos</button>
+        </nav>
+
+        <div class="px-6 py-4 border-t border-slate-700/50 mt-auto bg-slate-800/20">
+            <p class="text-[10px] text-slate-500 uppercase font-bold mb-3 tracking-wider">Inventario Total</p>
+            <div class="flex justify-between items-center mb-2"><span
+                    class="text-xs text-slate-300 flex items-center gap-2"><span
+                        class="material-icons-round text-sm text-blue-400">tablet_mac</span> Tablets</span><span
+                    class="text-sm font-bold text-white bg-slate-700 px-2 rounded" id="count-tablets">0</span></div>
+            <div class="flex justify-between items-center mb-4"><span
+                    class="text-xs text-slate-300 flex items-center gap-2"><span
+                        class="material-icons-round text-sm text-amber-400">cloud</span> Licencias</span><span
+                    class="text-sm font-bold text-white bg-slate-700 px-2 rounded" id="count-licenses">0</span></div>
+
+            <div class="border-t border-slate-700/50 pt-3">
+                <p class="text-[10px] text-slate-500 uppercase font-bold mb-3 tracking-wider">Formados (En Selección)
+                </p>
+                <div id="sidebar-dynamic-stats" class="space-y-2"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 flex flex-col relative bg-darkbg overflow-hidden">
+        <header
+            class="h-16 glass-panel flex items-center justify-between px-6 sticky top-0 z-30 flex-shrink-0 border-b border-slate-700/50">
+            <div class="flex items-center gap-4">
+                <h2 id="page-title" class="text-xl font-bold text-white whitespace-nowrap">Dashboard</h2>
+                <div class="flex bg-slate-800 rounded-lg p-1 border border-slate-700" id="brand-filters"></div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="app.showProfile()"
+                    class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs font-bold transition">
+                    <span class="material-icons-round text-sm text-indigo-400">account_circle</span> <span
+                        id="header-user">User</span>
+                </button>
+                <button onclick="app.createModal()"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95 whitespace-nowrap">
+                    <span class="material-icons-round">person_add</span> Nuevo Comercial
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4" id="main-container">
+
+            <!-- VIEW DASHBOARD -->
+            <div id="view-dashboard" class="space-y-4">
+                <div
+                    class="flex flex-col xl:flex-row gap-4 bg-sidebar p-3 rounded-xl border border-indigo-500/20 shadow-lg">
+                    <div class="flex-1">
+                        <h3 class="text-white font-bold text-sm flex items-center gap-2"><span
+                                class="material-icons-round text-amber-400 text-sm">date_range</span> Cierre Mensual de
+                            Actividad</h3>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="date" id="range-start" class="dash-date text-xs w-32">
+                        <input type="date" id="range-end" class="dash-date text-xs w-32">
+                        <button onclick="app.renderAll()"
+                            class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-2 rounded transition">Filtrar</button>
+                        <div class="flex gap-2 border-l border-slate-600 pl-2">
+                            <button onclick="app.generateReport()"
+                                class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded transition">Resumen
+                                Texto</button>
+                            <button onclick="app.downloadBillingCSV()"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded transition">Cierre
+                                CSV</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- iPad Configuraciones -->
+                    <div
+                        class="bg-sidebar p-4 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+                            <span class="material-icons-round text-[110px] text-emerald-400">tablet_mac</span>
+                        </div>
+                        <p class="text-emerald-400 text-[10px] font-bold uppercase relative z-10">iPad configurados</p>
+                        <h3 class="text-3xl font-bold text-white relative z-10" id="res-config">0</h3>
+                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Cambios de titularidad
+                        </p>
+                    </div>
+                    <!-- Usuarios Certificados -->
+                    <div
+                        class="bg-sidebar p-4 rounded-xl border border-indigo-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+                            <span class="material-icons-round text-[110px] text-indigo-400">school</span>
+                        </div>
+                        <p class="text-indigo-400 text-[10px] font-bold uppercase relative z-10">Usuarios Certificados
+                        </p>
+                        <h3 class="text-3xl font-bold text-white relative z-10" id="res-formed">0</h3>
+                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Formaciones realizadas
+                        </p>
+                    </div>
+                    <!-- Pendiente IT -->
+                    <div
+                        class="bg-sidebar p-4 rounded-xl border border-red-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+                            <span class="material-icons-round text-[110px] text-red-400">phonelink_setup</span>
+                        </div>
+                        <p class="text-red-400 text-[10px] font-bold uppercase relative z-10">Pendiente IT</p>
+                        <h3 class="text-3xl font-bold text-white relative z-10" id="kpi-it">0</h3>
+                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Por configurar</p>
+                    </div>
+                    <!-- Pendiente Formar -->
+                    <div
+                        class="bg-sidebar p-4 rounded-xl border border-amber-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+                            <span class="material-icons-round text-[110px] text-amber-400">auto_stories</span>
+                        </div>
+                        <p class="text-amber-400 text-[10px] font-bold uppercase relative z-10">Pendiente Formar</p>
+                        <h3 class="text-3xl font-bold text-white relative z-10" id="kpi-train-pending">0</h3>
+                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Por certificar</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="bg-sidebar border border-slate-700 rounded-xl p-3 chart-box flex flex-col text-center">
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="font-bold text-white text-[10px] uppercase">Efectividad Formativa</h4><span
+                                class="text-emerald-400 font-bold text-xs" id="progress-text">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden mb-3">
+                            <div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-500"
+                                style="width: 0%"></div>
+                        </div>
+                        <div class="flex-1 w-full flex justify-center items-center"><canvas id="chart-brands"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-sidebar border border-slate-700 rounded-xl p-3 chart-box flex flex-col text-center">
+                        <h4 class="font-bold text-white text-[10px] uppercase mb-2">Mix de Origen de Solicitudes</h4>
+                        <div class="flex-1 w-full flex justify-center items-center"><canvas id="chart-dist"></canvas>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-sidebar border border-slate-700 rounded-xl flex flex-col chart-box overflow-hidden text-center">
+                        <div
+                            class="p-3 bg-sidebar/50 border-b border-slate-700 text-white font-bold text-[10px] uppercase tracking-wider">
+                            Próximas Citas Formación</div>
+                        <div class="overflow-y-auto flex-1 p-2 space-y-2 text-left" id="list-agenda"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW IT -->
+            <div id="view-it" class="hidden">
+                <div class="bg-sidebar rounded-xl border border-slate-700 p-6 shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-white font-bold text-lg">Control Hardware</h3><input id="search-it"
+                            onkeyup="app.renderIT()" placeholder="Buscar comercial o S/N..."
+                            class="bg-slate-900 border border-slate-600 rounded px-4 py-2 text-sm text-white w-64 outline-none">
+                    </div>
+                    <table class="w-full text-sm text-slate-300">
+                        <thead class="text-xs uppercase bg-slate-800 text-slate-500">
+                            <tr>
+                                <th class="p-3 text-left">Usuario</th>
+                                <th class="p-3 text-left">Concesionario</th>
+                                <th class="p-3 text-left">Estado IT</th>
+                                <th class="p-3 text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="it-body" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW KANBAN -->
+            <div id="view-kanban" class="hidden h-full flex flex-col">
+                <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <h3 class="text-white font-bold text-lg">Gestión Formativa</h3>
+                    <div class="flex gap-2">
+                        <button onclick="app.openWordReport()"
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow-lg flex items-center gap-2">
+                            <span class="material-icons-round text-sm">description</span> Exportar Word
+                        </button>
+                        <input id="search-kanban" onkeyup="app.renderKanban()"
+                            placeholder="Filtrar por nombre o concesionario..."
+                            class="bg-slate-900 border border-slate-600 rounded-full px-4 py-1.5 text-xs text-white w-72 outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+                <div class="kanban-wrapper h-full" id="kanban-container">
+                    <div class="kanban-column">
+                        <div class="kanban-header text-slate-400 border-b-4 border-slate-500">PENDIENTE <span
+                                id="count-pendiente" class="text-[10px] bg-slate-700 px-2 rounded">0</span></div>
+                        <div id="col-pendiente" class="kanban-body" data-status="Pendiente"></div>
+                    </div>
+                    <div class="kanban-column">
+                        <div class="kanban-header text-amber-500 border-b-4 border-amber-500">CONVOCADA <span
+                                id="count-convocada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
+                        </div>
+                        <div id="col-convocada" class="kanban-body" data-status="Convocada"></div>
+                    </div>
+                    <div class="kanban-column">
+                        <div class="kanban-header text-indigo-400 border-b-4 border-indigo-400">CONFIRMADA <span
+                                id="count-confirmada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
+                        </div>
+                        <div id="col-confirmada" class="kanban-body" data-status="Confirmada"></div>
+                    </div>
+                    <div class="kanban-column">
+                        <div class="kanban-header text-emerald-400 border-b-4 border-emerald-400">REALIZADA <span
+                                id="count-realizada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
+                        </div>
+                        <div id="col-realizada" class="kanban-body" data-status="Realizada"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW INFORMES -->
+            <div id="view-informes" class="hidden h-full flex flex-col space-y-4">
+                <div class="bg-sidebar p-3 rounded-xl border border-slate-700 shadow-xl mb-2">
+                    <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-3">
+                        <div class="flex gap-2">
+                            <button onclick="app.copyControlSummary()"
+                                class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 transition active:scale-95">
+                                <span class="material-icons-round text-sm">content_copy</span> Resumen Pendientes
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="app.migrateData()" id="btn-migrate"
+                                class="text-amber-400 border border-amber-400/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-amber-400/10 transition">Sincronizar
+                                Datos</button>
+                            <button onclick="app.resetData()"
+                                class="text-red-400 border border-red-400/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-400/10 transition">Reset
+                                Sistema</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 justify-between">
+                        <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-lg border border-slate-700">
+                            <span class="text-xs text-slate-400 font-bold uppercase pl-1">Exportar Rango:</span>
+                            <select id="export-type"
+                                class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white outline-none focus:border-indigo-500">
+                                <option value="alta">Fecha Alta</option>
+                                <option value="formacion">Fecha Formación</option>
+                                <option value="config">Fecha Config IT</option>
+                            </select>
+                            <input type="date" id="export-start"
+                                class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white outline-none focus:border-indigo-500">
+                            <span class="text-slate-500 text-xs">a</span>
+                            <input type="date" id="export-end"
+                                class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white outline-none focus:border-indigo-500">
+                            <button onclick="app.exportCSVRange()"
+                                class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-bold transition flex items-center gap-2 shadow-lg active:scale-95">
+                                <span class="material-icons-round text-sm">download</span> Exportar
+                            </button>
+                        </div>
+                        <button onclick="app.exportCSV()"
+                            class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow-lg active:scale-95">Exportar
+                            Todo (CSV)</button>
+                    </div>
+                </div>
+                <div class="bg-sidebar rounded-xl border border-slate-700 p-6 flex-1 flex flex-col overflow-hidden">
+                    <input id="search-data" onkeyup="app.renderInformes()"
+                        placeholder="Buscar en base de datos completa..."
+                        class="bg-slate-900 border border-slate-600 rounded px-4 py-2 text-sm text-white w-full mb-4 outline-none">
+                    <div class="overflow-y-auto flex-1">
+                        <table class="w-full text-sm text-slate-300">
+                            <thead class="text-xs uppercase bg-slate-800 text-slate-500 sticky top-0 z-10">
+                                <tr>
+                                    <th class="p-3 text-left">ID</th>
+                                    <th class="p-3 text-left">Nombre Completo</th>
+                                    <th class="p-3 text-left">Marca</th>
+                                    <th class="p-3 text-left">Concesionario</th>
+                                    <th class="p-3 text-left">Tipo</th>
+                                    <th class="p-3 text-left">Formación</th>
+                                    <th class="p-3 text-left">IT Config</th>
+                                    <th class="p-3 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-body" class="divide-y divide-slate-700/50 text-xs"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const app = {
+            db: [],
+            year: '2026',
+            brand: 'all',
+            user: null,
+            chartDist: null,
+            chartBrands: null,
+            clients: [], // Will fetch from API
+
+            async init() {
+                const u = sessionStorage.getItem('cx_user');
+                if (!u) { window.location.href = 'login.html'; return; }
+                this.user = JSON.parse(u);
+
+                // Update Header User
+                const headerUser = document.getElementById('header-user');
+                if (headerUser) headerUser.innerText = this.user.username;
+
+                this.year = document.getElementById('global-year').value;
+                const d = new Date();
+                const start = new Date(d.getFullYear(), d.getMonth(), 1);
+                const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+                document.getElementById('range-start').value = start.toLocaleDateString('en-CA');
+                document.getElementById('range-end').value = end.toLocaleDateString('en-CA');
+
+                // Show body now that auth is confirmed
+                document.body.style.display = 'flex';
+
+                // Export Filter Defaults
+                if (document.getElementById('export-start')) {
+                    document.getElementById('export-start').value = start.toLocaleDateString('en-CA');
+                    document.getElementById('export-end').value = end.toLocaleDateString('en-CA');
+                }
+
+                await Promise.all([this.fetchData(), this.fetchClients()]);
+
+                this.nav('dashboard');
+                this.renderFilters();
+                this.initKanban();
+            },
+
+            async fetchClients() {
+                try {
+                    const res = await fetch('/api/clients');
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.clients = data.map(c => c.name);
+                        this.clientRecords = data; // Store full objects too if needed
+                    }
+                } catch (e) {
+                    console.error("Error fetching clients", e);
+                    this.clients = ['Kia', 'Hyundai', 'Kia Canarias']; // Fallback
+                }
+            },
+
+            async fetchData() {
+                try {
+                    const res = await fetch('/api/records');
+                    if (res.ok) {
+                        this.db = await res.json();
+                        this.renderAll();
+                    }
+                } catch (e) { console.error(e); }
+            },
+
+            formatDateEU(iso) { if (!iso) return ''; const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; },
+            isoToInput(iso) { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); },
+            getTimeFromDate(iso) { if (!iso || !iso.includes('T')) return '--:--'; return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); },
+
+            renderFilters() {
+                const container = document.getElementById('brand-filters');
+                let html = `<button onclick="app.setFilter('all')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase ${this.brand === 'all' ? 'btn-active' : 'btn-inactive'}">Todos</button>`;
+                this.clients.forEach(c => {
+                    html += `<button onclick="app.setFilter('${c}')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase whitespace-nowrap ${this.brand === c ? 'btn-active' : 'btn-inactive'}">${c}</button>`;
+                });
+
+                // Only show '+' button for admins
+                if (this.user && this.user.role === 'admin') {
+                    html += `<button onclick="app.openClientManager()" class="px-2 py-1 text-xs rounded transition bg-indigo-600 text-white ml-2 flex items-center justify-center font-bold hover:bg-indigo-500 shadow-lg" title="Gestionar Marcas">+</button>`;
+                }
+                container.innerHTML = html;
+            },
+
+            nav(view) {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-slate-800', 'text-white'));
+                document.getElementById('nav-' + view).classList.add('bg-slate-800', 'text-white');
+                ['dashboard', 'it', 'kanban', 'informes'].forEach(v => document.getElementById('view-' + v).classList.add('hidden'));
+                document.getElementById('view-' + view).classList.remove('hidden');
+                document.getElementById('page-title').innerText = view.toUpperCase();
+                this.renderAll();
+                if (view === 'kanban') this.initKanban();
+            },
+
+            setFilter(brand) { this.brand = brand; this.renderFilters(); this.renderAll(); },
+            getData() { return this.db.filter(u => (this.year === 'all' || u.year === this.year) && (this.brand === 'all' || u.marca === this.brand)); },
+
+            matchesSearch(u, search) {
+                if (!search) return true;
+                const s = search.trim().toLowerCase();
+                return (u.id || '').toString().toLowerCase().includes(s) ||
+                    (u.nombre || '').toString().toLowerCase().includes(s) ||
+                    (u.apellidos || '').toString().toLowerCase().includes(s) ||
+                    (u.concesionario || '').toString().toLowerCase().includes(s) ||
+                    (u.serial || '').toString().toLowerCase().includes(s);
+            },
+
+            renderAll() {
+                this.year = document.getElementById('global-year').value;
+                this.updateSidebarStats();
+                if (!document.getElementById('view-dashboard').classList.contains('hidden')) this.renderDashboard();
+                if (!document.getElementById('view-informes').classList.contains('hidden')) this.renderInformes();
+                if (!document.getElementById('view-it').classList.contains('hidden')) this.renderIT();
+                if (!document.getElementById('view-kanban').classList.contains('hidden')) this.renderKanban();
+            },
+
+            updateSidebarStats() {
+                const data = this.getData();
+                document.getElementById('count-tablets').innerText = data.filter(u => u.tipoAcceso === 'Tablet').length;
+                document.getElementById('count-licenses').innerText = data.filter(u => u.tipoAcceso !== 'Tablet').length;
+                const container = document.getElementById('sidebar-dynamic-stats');
+                container.innerHTML = '';
+                this.clients.forEach(c => {
+                    const count = data.filter(u => u.marca === c && u.formacion.status === 'Realizada').length;
+                    let color = c === 'Kia' ? 'bg-kia' : (c === 'Hyundai' ? 'bg-blue-400' : 'bg-indigo-500');
+                    container.innerHTML += `<div class="flex justify-between items-center text-[10px]"><span class="flex items-center gap-2 uppercase font-semibold"><div class="w-2 h-2 rounded-full ${color}"></div> ${c}</span><span class="font-bold text-white">${count}</span></div>`;
+                });
+            },
+
+            sendEmail(id) {
+                const u = this.db.find(x => x.id == id); if (!u) return;
+                let subject = "";
+                let appName = "";
+                if (u.marca === 'Kia' || u.marca === 'Kia Canarias') { subject = "Formación en Kia iDealer: Mejorando la Experiencia del Cliente"; appName = "Kia iDealer"; }
+                else if (u.marca === 'Hyundai') { subject = "Formación en Hyundai SSC Mejorando la Experiencia del Cliente"; appName = "Hyundai SSC"; }
+                else { subject = `Formación en ${u.marca}: Mejorando la Experiencia del Cliente`; appName = u.marca; }
+                const body = `Hola ${u.nombre},\n\nMe gustaría agendar contigo una breve formación online (aprox. 40 minutos) por Teams para ayudarte a sacar más partido a la plataforma ${appName} y que puedas atender a tus clientes de una forma aún más profesional.\n\nTe propongo estas opciones de fecha y hora:\n\n[Día] [hora]\n[Día] [hora]\n[Día] [hora]\n\nPor favor, indícame qué opción te encaja mejor (o sugiéreme otra alternativa) y te enviaré la convocatoria de Teams.\n\nGracias y quedo pendiente de tu respuesta.`;
+                window.location.href = `mailto:${u.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            },
+
+            copyControlSummary() {
+                const data = this.getData().filter(u => u.reqFormacion && u.formacion.status !== 'Realizada');
+                if (data.length === 0) return Swal.fire({ title: 'Sin pendientes', background: '#1e293b' });
+                let dealers = {};
+                data.forEach(u => {
+                    if (!dealers[u.concesionario]) dealers[u.concesionario] = [];
+                    dealers[u.concesionario].push(`${u.nombre} ${u.apellidos} (${u.formacion.status})`);
+                });
+                let text = `📢 PENDIENTES DE FORMACIÓN (${this.brand === 'all' ? 'GLOBAL' : this.brand})\n\n`;
+                for (let d in dealers) { text += `📍 ${d}:\n- ${dealers[d].join('\n- ')}\n\n`; }
+                navigator.clipboard.writeText(text);
+                Swal.fire({ title: 'Copiado', text: 'Resumen listo para pegar.', icon: 'success', background: '#1e293b' });
+            },
+
+            renderDashboard() {
+                const data = this.getData();
+                const sStr = document.getElementById('range-start').value;
+                const eStr = document.getElementById('range-end').value;
+
+                let cnf = 0, frm = 0;
+                let iPadOwnershipChanges = 0, newCloudLicenses = 0, infoAccess = 0;
+
+                if (sStr && eStr) {
+                    const s = new Date(sStr); const e = new Date(eStr); e.setHours(23, 59, 59, 999);
+
+                    // LÓGICA CORREGIDA PARA "SOLICITUDES" (SEGÚN FECHA DE ALTA)
+                    iPadOwnershipChanges = data.filter(u => u.tipoAcceso === 'Tablet' && new Date(u.fechaAlta) >= s && new Date(u.fechaAlta) <= e).length;
+                    newCloudLicenses = data.filter(u => u.tipoAcceso === 'Licencia Cloud' && new Date(u.fechaAlta) >= s && new Date(u.fechaAlta) <= e).length;
+                    infoAccess = data.filter(u => u.tipoAcceso === 'Acceso a informes' && new Date(u.fechaAlta) >= s && new Date(u.fechaAlta) <= e).length;
+
+                    cnf = data.filter(u => u.reqConfig && u.fechaConfig && new Date(u.fechaConfig) >= s && new Date(u.fechaConfig) <= e).length;
+                    frm = data.filter(u => u.reqFormacion && u.formacion.status === 'Realizada' && new Date(u.formacion.dateCompleted || u.formacion.date) >= s && new Date(u.formacion.dateCompleted || u.formacion.date) <= e).length;
+                }
+
+                document.getElementById('res-config').innerText = cnf;
+                document.getElementById('res-formed').innerText = frm;
+                document.getElementById('kpi-it').innerText = data.filter(u => u.reqConfig && !u.fechaConfig).length;
+                document.getElementById('kpi-train-pending').innerText = data.filter(u => u.reqFormacion && u.formacion.status !== 'Realizada').length;
+
+                const pct = data.filter(u => u.reqFormacion).length > 0 ? Math.round((data.filter(u => u.reqFormacion && u.formacion.status === 'Realizada').length / data.filter(u => u.reqFormacion).length) * 100) : 0;
+                document.getElementById('progress-text').innerText = pct + '%';
+                document.getElementById('progress-fill').style.width = pct + '%';
+
+                if (this.chartDist) this.chartDist.destroy();
+                this.chartDist = new Chart(document.getElementById('chart-dist'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Cambio Titular iPad', 'Nueva Licencia', 'Acceso Informes'],
+                        datasets: [{ data: [iPadOwnershipChanges, newCloudLicenses, infoAccess], backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6'], borderWidth: 0 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 9 }, usePointStyle: true, padding: 15 } } } }
+                });
+
+                if (this.chartBrands) this.chartBrands.destroy();
+                this.chartBrands = new Chart(document.getElementById('chart-brands'), {
+                    type: 'bar', data: { labels: this.clients, datasets: [{ label: 'Pendientes', data: this.clients.map(c => data.filter(u => u.marca === c && u.reqFormacion && u.formacion.status !== 'Realizada').length), backgroundColor: '#6366f1', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true }, x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } } }
+                });
+
+                const sch = data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada').sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date)).slice(0, 5);
+                document.getElementById('list-agenda').innerHTML = sch.map(u => `<div class="flex items-center gap-2 p-1.5 bg-slate-800/50 rounded border border-slate-700 text-[10px]"><div class="bg-indigo-600 text-white px-2 py-1 rounded font-bold text-center leading-none">${new Date(u.formacion.date).getDate()}<br><small>${new Date(u.formacion.date).toLocaleString('es', { month: 'short' }).toUpperCase()}</small></div><div class="flex-1 truncate"><p class="text-white font-bold truncate uppercase">${u.nombre} ${u.apellidos}</p><p class="text-slate-400 truncate uppercase">${u.marca}</p></div><div class="text-indigo-300 font-mono">${this.getTimeFromDate(u.formacion.date)}</div></div>`).join('');
+            },
+
+            renderIT() {
+                const list = this.getData().filter(u => u.reqConfig === true);
+                const search = document.getElementById('search-it').value.toLowerCase();
+                document.getElementById('it-body').innerHTML = list.filter(u => this.matchesSearch(u, search)).map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-2" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
+            },
+
+            renderInformes() {
+                const search = document.getElementById('search-data').value.toLowerCase();
+                document.getElementById('data-body').innerHTML = this.getData().filter(u => this.matchesSearch(u, search)).map(u => `<tr class="border-b border-slate-800"><td class="p-3 font-mono text-xs text-slate-400">${u.id}</td><td class="p-3 text-xs text-slate-300 uppercase font-medium">${u.nombre} ${u.apellidos}</td><td class="p-3 uppercase text-xs">${u.marca}</td><td class="p-3 text-xs uppercase">${u.concesionario}</td><td class="p-3 text-xs uppercase text-indigo-300">${u.tipoAcceso}</td><td class="p-3 text-xs uppercase">${u.reqFormacion ? (u.formacion.status === 'Realizada' ? '✅ OK' : u.formacion.status) : 'No req'}</td><td class="p-3 text-xs uppercase">${u.reqConfig ? (u.fechaConfig ? '✅ OK' : 'Pendiente') : 'No req'}</td><td class="p-3 text-right flex justify-end gap-2"><button onclick="app.editUser('${u.id}')" class="text-slate-400 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button><button onclick="app.deleteUser('${u.id}')" class="text-slate-400 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button></td></tr>`).join('');
+            },
+
+            initKanban() {
+                ['col-pendiente', 'col-convocada', 'col-confirmada', 'col-realizada'].forEach(id => {
+                    const el = document.getElementById(id); if (el._sortable) el._sortable.destroy();
+                    el._sortable = new Sortable(el, { group: 'kanban', animation: 150, onEnd: (evt) => app.handleKanbanDrop(evt) });
+                });
+            },
+
+            renderKanban() {
+                const search = document.getElementById('search-kanban').value.toLowerCase();
+                ['Pendiente', 'Convocada', 'Confirmada', 'Realizada'].forEach(s => {
+                    const col = document.getElementById('col-' + s.toLowerCase()); col.innerHTML = '';
+                    const users = this.getData().filter(u => u.reqFormacion && u.formacion.status === s && this.matchesSearch(u, search));
+                    document.getElementById('count-' + s.toLowerCase()).innerText = users.length;
+                    users.forEach(u => {
+                        const daysWait = Math.floor((new Date() - new Date(u.fechaAlta)) / (1000 * 60 * 60 * 24));
+                        const isRealizada = s === 'Realizada';
+                        const card = document.createElement('div');
+                        card.className = `kanban-card p-3 mb-2 rounded border border-slate-700 shadow-md ${u.marca === 'Kia' ? 'border-l-red-500' : (u.marca === 'Hyundai' ? 'border-l-blue-900' : 'border-l-indigo-500')}`;
+                        card.setAttribute('data-id', u.id);
+
+                        if (isRealizada) {
+                            card.innerHTML = `<div class="flex justify-between items-center"><h4 class="text-xs font-bold text-white truncate w-32 uppercase">${u.nombre} ${u.apellidos}</h4><span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">${this.formatDateEU(u.formacion.date)}</span></div>`;
+                        } else {
+                            card.innerHTML = `
+                                <div class="text-xs font-bold text-white uppercase truncate mb-1">${u.nombre} ${u.apellidos}</div>
+                                <div class="text-[9px] text-slate-400 uppercase truncate mb-2">${u.concesionario}</div>
+                                <div class="flex justify-between items-center border-t border-slate-700 pt-2">
+                                    <div class="flex gap-2">
+                                        <button onclick="app.editUser('${u.id}')" class="text-slate-500 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
+                                        <button onclick="event.stopPropagation(); app.sendEmail('${u.id}')" class="text-slate-500 hover:text-white transition" title="Email"><span class="material-icons-round text-sm">mail</span></button>
+                                        <button onclick="app.deleteUser('${u.id}')" class="text-slate-500 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
+                                    </div>
+                                    <span class="text-[9px] text-slate-500 font-bold">${u.formacion.date ? this.formatDateEU(u.formacion.date) : ''}</span>
+                                </div>`;
+                        }
+                        col.appendChild(card);
+                    });
+                });
+                this.initKanban();
+            },
+
+            async handleKanbanDrop(evt) {
+                const id = evt.item.getAttribute('data-id'); const newStatus = evt.to.getAttribute('data-status'); const u = app.db.find(x => x.id == id);
+                if (!u) return;
+                if (evt.from.id.includes('pendiente') && newStatus !== 'Pendiente') {
+                    const { value: d } = await Swal.fire({ title: 'Programar Cita', input: 'datetime-local', background: '#1e293b', color: '#fff' });
+                    if (d) u.formacion.date = d; else { app.renderKanban(); return; }
+                }
+                if (newStatus === 'Realizada') u.formacion.dateCompleted = new Date().toISOString().split('T')[0];
+                u.formacion.status = newStatus; await app.apiUpdate(u); app.renderAll();
+            },
+
+            async openUserModal(id = null) {
+                const user = id ? this.db.find(u => u.id == id) : null;
+                const years = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033];
+                const yearOptions = years.map(y => `<option value="${y}" ${user?.year == y || (!user && y == 2026) ? 'selected' : ''}>${y}</option>`).join('');
+                let brandOptions = this.clients.map(c => `<option value="${c}" ${user?.marca === c ? 'selected' : ''}>${c}</option>`).join('');
+                brandOptions = `<option value="" disabled ${!user ? 'selected' : ''}>Seleccionar Marca...</option>` + brandOptions;
+
+                const { value: form } = await Swal.fire({
+                    title: id ? 'Editar Comercial' : 'Alta de Comercial',
+                    html: `
+                        <div class="text-left space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="field-label">ID Comercial</label>
+                                    <input id="sw-id" value="${user?.id || ''}" class="custom-field">
+                                    <div id="id-error" class="text-error-msg h-4"></div>
+                                </div>
+                                <div>
+                                    <label class="field-label">Fecha Alta</label>
+                                    <input type="date" id="sw-date" value="${user?.fechaAlta || new Date().toISOString().split('T')[0]}" class="custom-field">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="field-label">Marca</label>
+                                    <select id="sw-brand" class="custom-field">${brandOptions}</select>
+                                </div>
+                                <div>
+                                    <label class="field-label">Año</label>
+                                    <select id="sw-year" class="custom-field">${yearOptions}</select>
+                                </div>
+                            </div>
+                            <div><label class="field-label">Nombre</label><input id="sw-nom" value="${user?.nombre || ''}" class="custom-field"></div>
+                            <div><label class="field-label">Apellidos</label><input id="sw-ape" value="${user?.apellidos || ''}" class="custom-field"></div>
+                            <div><label class="field-label">Teléfono</label><input id="sw-tel" value="${user?.telefono || ''}" class="custom-field"></div>
+                            <div><label class="field-label">Email</label><input id="sw-ema" type="email" value="${user?.email || ''}" class="custom-field"></div>
+                            <div><label class="field-label">Concesionario</label><input id="sw-dea" value="${user?.concesionario || ''}" class="custom-field uppercase"></div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-600 mt-2">
+                                <label class="field-label text-indigo-400">Tipo de Acceso</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <select id="sw-type" class="custom-field" onchange="window.toggleFields(this.value)">
+                                        <option value="Tablet" ${user?.tipoAcceso === 'Tablet' ? 'selected' : ''}>Tablet</option>
+                                        <option value="Licencia Cloud" ${user?.tipoAcceso === 'Licencia Cloud' ? 'selected' : ''}>Licencia Cloud</option>
+                                        <option value="Acceso a informes" ${user?.tipoAcceso === 'Acceso a informes' ? 'selected' : ''}>Acceso a informes</option>
+                                    </select>
+                                    <input id="sw-serial" value="${user?.serial || ''}" placeholder="S/N Tablet" class="custom-field border-blue-500/50" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
+                                </div>
+                                <div id="div-prev" class="mt-2" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
+                                    <input id="sw-prev" value="${user?.usuarioAnterior || ''}" placeholder="Comercial Anterior" class="custom-field border-amber-500/50">
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 mt-2">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="sw-req" class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-indigo-500 focus:ring-0" ${user?.reqFormacion ? 'checked' : ''}>
+                                    <label for="sw-req" class="text-xs text-slate-400">Requiere Formación</label>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="sw-req-config" class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-indigo-500 focus:ring-0" ${user?.reqConfig ? 'checked' : ''}>
+                                    <label for="sw-req-config" class="text-xs text-slate-400">Requiere Configuración IT</label>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
+                                <textarea id="sw-obs" class="custom-field h-20 text-xs w-full p-2 resize-none" placeholder="Añadir observaciones...">${user?.observaciones || ''}</textarea>
+                            </div>
+                        </div>
+                    `,
+                    background: '#1e293b', color: '#fff', showCancelButton: true, confirmButtonText: 'Guardar', confirmButtonColor: '#6366f1', width: '600px',
+                    didOpen: () => {
+                        window.toggleFields = function (val) { const isTab = val === 'Tablet'; document.getElementById('sw-serial').style.display = isTab ? 'block' : 'none'; document.getElementById('div-prev').style.display = isTab ? 'block' : 'none'; };
+                        window.toggleFields(document.getElementById('sw-type').value);
+                        const idInput = document.getElementById('sw-id');
+                        const errorDiv = document.getElementById('id-error');
+                        idInput.addEventListener('input', () => {
+                            const exists = app.db.some(u => u.id === idInput.value.trim() && u.id !== user?.id);
+                            idInput.classList.toggle('field-error', exists);
+                            errorDiv.innerHTML = exists ? '<span class="material-icons-round text-sm">error</span> ID Duplicado' : '';
+                            errorDiv.classList.toggle('visible', exists);
+                        });
+                    },
+                    preConfirm: () => {
+                        const idVal = document.getElementById('sw-id').value;
+                        const brandVal = document.getElementById('sw-brand').value;
+                        if (!idVal) return Swal.showValidationMessage('ID obligatorio');
+                        if (!brandVal) return Swal.showValidationMessage('Debes seleccionar una Marca');
+                        return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: document.getElementById('sw-brand').value, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, serial: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
+                    }
+                });
+                if (form) { if (id) { const i = this.db.findIndex(u => u.id == id); this.db[i] = form; await this.apiUpdate(form); } else { this.db.push(form); await this.apiCreate(form); } this.renderAll(); }
+            },
+
+            async setConfig(id) { const u = this.db.find(x => x.id == id); const { value: d } = await Swal.fire({ title: 'Fecha Intervención IT', input: 'date', background: '#1e293b' }); if (d) { u.fechaConfig = d; await this.apiUpdate(u); this.renderAll(); } },
+
+            sendITEmail(id) {
+                const u = this.db.find(x => x.id == id);
+                if (!u) return;
+
+                const subject = `Cambio de titularidad ${u.marca} ${u.concesionario}`;
+                const body = `Te envío los datos para el cambio de titularidad relacionado con ${u.marca} ${u.concesionario}.
+
+Nombre de contacto: ${u.nombre} ${u.apellidos}
+Teléfono de contacto: ${u.telefono || 'No disponible'}
+
+DATOS DEL COMERCIAL:
+---------------------------------------------
+ID: ${u.id}
+Fecha Alta: ${u.fechaAlta}
+Marca: ${u.marca}
+Nombre: ${u.nombre}
+Apellidos: ${u.apellidos}
+Email: ${u.email}
+Concesionario: ${u.concesionario}
+Tipo Acceso: ${u.tipoAcceso}
+${u.serial ? `S/N Tablet: ${u.serial}` : ''}
+${u.usuarioAnterior ? `Comercial Anterior: ${u.usuarioAnterior}` : ''}
+---------------------------------------------
+
+Si tienes dificultad para localizarles o contactar con ellos, dínoslo para poder ayudarte.`;
+
+                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            },
+
+            async apiCreate(record) {
+                await fetch('/api/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) });
+            },
+            async apiUpdate(record) {
+                await fetch('/api/records/' + record.id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) });
+            },
+            async apiDelete(id) {
+                await fetch('/api/records/' + id, { method: 'DELETE' });
+            },
+
+            async migrateData() {
+                try {
+                    console.log('Starting migration...');
+                    const oldData = localStorage.getItem('db_v47');
+
+                    if (!oldData) {
+                        // Try older keys just in case
+                        const v46 = localStorage.getItem('db_v46');
+                        if (v46) return Swal.fire('Versión Antigua', 'Detectada versión v46. Contacta con soporte.', 'info');
+                        return Swal.fire('Sin datos', 'No se ha encontrado "db_v47" en el navegador. ¿Has borrado la caché?', 'warning');
+                    }
+
+                    let records;
+                    try {
+                        records = JSON.parse(oldData);
+                    } catch (e) {
+                        return Swal.fire('Error Datos', 'Los datos del navegador están corruptos (JSON invalido).', 'error');
+                    }
+
+                    if (!Array.isArray(records)) return Swal.fire('Error Formato', 'Los datos no son una lista válida.', 'error');
+                    if (records.length === 0) return Swal.fire('Vacio', 'La base de datos del navegador está vacía (0 registros).', 'info');
+
+                    const { isConfirmed } = await Swal.fire({
+                        title: '¿Sincronizar?',
+                        text: `Se han encontrado ${records.length} registros en el navegador. Se fusionarán con la base de datos.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, Sincronizar',
+                        background: '#1e293b', color: '#fff'
+                    });
+
+                    if (!isConfirmed) return;
+
+                    Swal.fire({ title: 'Sincronizando...', didOpen: () => Swal.showLoading(), background: '#1e293b', color: '#fff' });
+
+                    const res = await fetch('/api/migrate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(records)
+                    });
+
+                    if (res.ok) {
+                        const json = await res.json();
+                        Swal.fire({ icon: 'success', title: 'Sincronización Completa', text: `Procesados ${json.count} registros.`, background: '#1e293b', color: '#fff' });
+                        this.fetchData();
+                    } else {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Error desconocido del servidor');
+                    }
+                } catch (e) {
+                    console.error('Migration Error:', e);
+                    Swal.fire({ icon: 'error', title: 'Error Crítico', text: e.message, background: '#1e293b', color: '#fff' });
+                }
+            },
+
+
+            exportCSV() {
+                try {
+                    const data = this.getData();
+                    let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;Observaciones\n";
+                    data.forEach(u => {
+                        const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
+                        const fStatus = u.formacion?.status || 'Pendiente';
+                        const fDate = u.formacion?.date || '';
+                        csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
+                    });
+                    const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); l.download = "Export_Completo.csv"; l.click();
+                } catch (e) { Swal.fire('Error CSV', e.message, 'error'); }
+            },
+
+            exportCSVRange() {
+                try {
+                    const type = document.getElementById('export-type').value;
+                    const sStr = document.getElementById('export-start').value;
+                    const eStr = document.getElementById('export-end').value;
+
+                    // If no dates provided, use defaults (e.g. current month) or show warning?
+                    // User requested specific inputs. If empty, warn.
+                    if (!sStr || !eStr) return Swal.fire('Fechas', 'Selecciona un rango de fechas.', 'warning');
+
+                    const s = new Date(sStr); const e = new Date(eStr); e.setHours(23, 59, 59, 999);
+
+                    // Filter logic based on type
+                    const data = this.getData().filter(u => {
+                        let dateToCheck = null;
+                        if (type === 'alta') {
+                            dateToCheck = new Date(u.fechaAlta);
+                        } else if (type === 'formacion') {
+                            if (u.formacion && u.formacion.date) {
+                                // Consider completed date if available, or scheduled date
+                                dateToCheck = new Date(u.formacion.dateCompleted || u.formacion.date);
+                            }
+                        } else if (type === 'config') {
+                            if (u.reqConfig && u.fechaConfig) {
+                                dateToCheck = new Date(u.fechaConfig);
+                            }
+                        }
+                        return dateToCheck && dateToCheck >= s && dateToCheck <= e;
+                    });
+
+                    if (data.length === 0) return Swal.fire('Vacio', 'No hay registros en ese rango y criterio.', 'info');
+
+                    let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;Observaciones\n";
+                    data.forEach(u => {
+                        const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
+                        const fStatus = u.formacion?.status || 'Pendiente';
+                        const fDate = u.formacion?.date || '';
+                        csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
+                    });
+                    const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); l.download = `Export_${type}_${sStr}_${eStr}.csv`; l.click();
+                } catch (e) {
+                    console.error(e);
+                    Swal.fire('Error Export', e.message, 'error');
+                }
+            },
+
+            async openWordReport() {
+                const { value: dates } = await Swal.fire({
+                    title: 'Informe Ejecutivo Word',
+                    html: `
+                        <div class="text-left">
+                            <label class="text-xs text-slate-400 uppercase font-bold">Rango de Fechas</label>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <input id="word-start" type="date" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white outline-none w-full">
+                                <input id="word-end" type="date" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white outline-none w-full">
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-2">
+                                * Tabla Resumen: Año acumulado hasta fecha fin.<br>
+                                * Desglose: Solo mes de fecha fin.
+                            </p>
+                            <div class="mt-3 flex items-center gap-2">
+                                <input type="checkbox" id="word-sim" class="w-3 h-3 rounded bg-slate-800 border-slate-600">
+                                <label for="word-sim" class="text-xs text-indigo-400 font-bold">Simular Datos (Gráfica)</label>
+                            </div>
+                        </div>
+                    `,
+                    background: '#1e293b', color: '#fff',
+                    showCancelButton: true, confirmButtonText: 'Generar',
+                    preConfirm: () => {
+                        const s = document.getElementById('word-start').value;
+                        const e = document.getElementById('word-end').value;
+                        const sim = document.getElementById('word-sim').checked;
+                        if (!s || !e) return Swal.showValidationMessage('Selecciona fechas');
+                        return { start: s, end: e, simulate: sim };
+                    }
+                });
+                if (dates) this.generateWordDocAdvanced(dates.start, dates.end, dates.simulate);
+            },
+
+            generateWordDoc(sStr, eStr, simulate = false) {
+                try {
+                    const endDate = new Date(eStr);
+                    const targetMonth = endDate.getMonth();
+                    const targetYear = endDate.getFullYear();
+
+                    // Platform Name Logic
+                    let platform = "";
+                    if (this.brand === 'Kia' || this.brand === 'Kia Canarias') platform = "iDealer";
+                    else if (this.brand === 'Hyundai') platform = "SSC";
+
+                    // Month Names
+                    const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+                    const monthName = months[targetMonth];
+
+                    // Data setup
+                    const allData = this.getData(); // Filtered by brand/year
+                    const ytdData = allData.filter(u => u.formacion && u.formacion.status === 'Realizada' && new Date(u.formacion.dateCompleted || u.formacion.date).getFullYear() === targetYear);
+
+                    // --- Summary Table (Jan -> Target Month) ---
+                    let summaryRows = "";
+                    let totalYTD = 0;
+                    for (let m = 0; m <= targetMonth; m++) {
+                        const count = ytdData.filter(u => new Date(u.formacion.dateCompleted || u.formacion.date).getMonth() === m).length;
+                        summaryRows += `<tr><td style="border:1px solid #000;padding:5px;">${months[m]}</td><td style="border:1px solid #000;padding:5px;text-align:center;">${count}</td></tr>`;
+                        totalYTD += count;
+                    }
+                    summaryRows += `<tr style="font-weight:bold;background:#eee;"><td style="border:1px solid #000;padding:5px;">TOTAL</td><td style="border:1px solid #000;padding:5px;text-align:center;">${totalYTD}</td></tr>`;
+
+                    // --- Detail List (Target Month Only) ---
+                    // Range: Start of Target Month to End of Target Month (or strictly the user provided range? User said "ultimo mes del rango". I will use the whole target month to be safe/standard).
+                    // Actually, let's use the USER provided Start/End? No, user said "Desglose es solo del ultimo mes".
+                    // So I will filter for: Month == targetMonth AND Year == targetYear.
+                    const monthData = ytdData.filter(u => new Date(u.formacion.dateCompleted || u.formacion.date).getMonth() === targetMonth);
+
+                    // Group by Concesionario
+                    const dealers = [...new Set(monthData.map(u => u.concesionario))].sort();
+                    let detailHtml = "";
+
+                    dealers.forEach(d => {
+                        const users = monthData.filter(u => u.concesionario === d);
+                        detailHtml += `<h3 style="margin-top:20px;border-bottom:1px solid #ccc;">${d} (${users.length})</h3>`;
+                        detailHtml += `<table style="width:100%;border-collapse:collapse;margin-bottom:10px;">`;
+                        detailHtml += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:5px;border:1px solid #ddd;">Fecha</th><th style="text-align:left;padding:5px;border:1px solid #ddd;">Comercial</th></tr>`;
+                        users.forEach(u => {
+                            const dStr = new Date(u.formacion.dateCompleted || u.formacion.date).toLocaleDateString();
+                            detailHtml += `<tr><td style="padding:5px;border:1px solid #ddd;">${dStr}</td><td style="padding:5px;border:1px solid #ddd;">${u.nombre} ${u.apellidos}</td></tr>`;
+                        });
+                        detailHtml += `</table>`;
+                    });
+
+                    const brandName = this.brand === 'all' ? 'Todas' : this.brand;
+                    const finalSubject = `Formacion Uso Plataforma ${brandName} ${platform} ${monthName} ${targetYear}`;
+
+                    // --- GENERATE CHART (Vertical Bars - Full Year) ---
+                    let maxCount = 0;
+                    const monthlyCounts = [];
+                    // Loop 0-11 for full year
+                    for (let m = 0; m < 12; m++) {
+                        let count = ytdData.filter(u => new Date(u.formacion.dateCompleted || u.formacion.date).getMonth() === m).length;
+                        if (simulate) count = Math.floor(Math.random() * 50) + 5;
+                        monthlyCounts.push(count);
+                        if (count > maxCount) maxCount = count;
+                    }
+                    if (maxCount === 0) maxCount = 1;
+
+                    let chartHtml = `
+                        <div style="margin-bottom:30px; border:1px solid #ddd; padding:20px; background:#f9f9f9;">
+                            <h3 style="margin:0 0 15px 0; color:#333; text-align:center;">Evolución Anual (${targetYear})</h3>
+                            <table style="width:100%; height:150px; border-collapse:collapse; margin:0 auto;">
+                                <tr style="height:120px; vertical-align:bottom;">
+                    `;
+
+                    const barColor = this.brand === 'Hyundai' ? '#00aad2' : (this.brand === 'Kia' ? '#bb162b' : '#6366f1');
+
+                    for (let m = 0; m < 12; m++) {
+                        const count = monthlyCounts[m];
+                        const pxHeight = Math.round((count / maxCount) * 120);
+                        const finalH = count > 0 && pxHeight < 2 ? 2 : pxHeight;
+
+                        chartHtml += `
+                            <td style="width:8%; text-align:center; vertical-align:bottom; padding:0 2px; height:150px;">
+                                <div style="font-size:8px; color:#555; margin-bottom:2px;">${count > 0 ? count : '&nbsp;'}</div>
+                                ${count > 0 ?
+                                `<table cellspacing="0" cellpadding="0" style="width:80%; margin:0 auto; border-collapse:collapse;">
+                                    <tr><td style="background:${barColor}; height:${finalH}px; font-size:1px; line-height:1px;">&nbsp;</td></tr>
+                                 </table>`
+                                : '<div style="height:1px;">&nbsp;</div>'}
+                            </td>
+                        `;
+                    }
+                    chartHtml += `</tr><tr>`;
+
+                    const shortMonths = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                    for (let m = 0; m < 12; m++) {
+                        chartHtml += `<td style="text-align:center; font-size:9px; color:#666; border-top:1px solid #ccc; padding-top:4px;">${shortMonths[m]}</td>`;
+                    }
+                    chartHtml += `</tr></table></div>`;
+
+                    // --- ANALYSIS SECTION ---
+                    let trendHtml = "";
+                    if (targetMonth > 0) {
+                        const currentC = monthlyCounts[targetMonth];
+                        const prevC = monthlyCounts[targetMonth - 1];
+                        const prevMonthName = months[targetMonth - 1];
+
+                        let text = "";
+                        let color = "#333";
+                        let icon = "";
+
+                        if (prevC === 0) {
+                            if (currentC === 0) text = "Sin cambios (0 formaciones)";
+                            else text = "Aumento significativo (Inicio de actividad)";
+                        } else {
+                            const diff = currentC - prevC;
+                            const pct = Math.round((diff / prevC) * 100);
+
+                            if (pct > 0) {
+                                text = `Incremento del ${pct}% respecto a ${prevMonthName}`;
+                                color = "green";
+                                icon = "▲";
+                            } else if (pct < 0) {
+                                text = `Descenso del ${Math.abs(pct)}% respecto a ${prevMonthName}`;
+                                color = "red";
+                                icon = "▼";
+                            } else {
+                                text = `Mantenimiento (0%) respecto a ${prevMonthName}`;
+                                color = "orange";
+                                icon = "=";
+                            }
+                        }
+
+                        trendHtml = `
+                            <br><hr><br>
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:5px;">
+                                <h3 style="margin-top:0; color:#334155;">Análisis Ejecutivo</h3>
+                                <p style="font-size:14px; line-height:1.5;">
+                                    El mes de <b>${monthName}</b> ha cerrado con <b>${currentC} formaciones</b>.
+                                    <br><br>
+                                    ${avgIcon} Se sitúa ${avgText}.
+                                    <br>
+                                    🏆 Representa ${rankText}
+                                </p>
+                            </div>
+                        `;
+                    }
+
+
+                    const html = `
+                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                        <head><meta charset='utf-8'><title>${finalSubject}</title></head>
+                        <body style="font-family: Calibri, sans-serif;">
+                            <p>Hola María y Sonia,</p>
+                            <p>Os adjuntamos el informe detallado del número total de usuarios formados en <b>${brandName}</b> en el mes de <b>${monthName}</b>.</p>
+                            
+                            <br>
+                            
+                            ${chartHtml}
+                            
+                            <table style="width:50%;border-collapse:collapse;border:1px solid #000;">
+                                <tr style="background:#334155;color:#fff;">
+                                    <th style="padding:5px;border:1px solid #000;">Mes</th>
+                                    <th style="padding:5px;border:1px solid #000;">Nº Formaciones</th>
+                                </tr>
+                                ${summaryRows}
+                            </table>
+                            
+                            <br>
+                            <hr>
+                            <h2>Desglose Detallado (${monthName})</h2>
+                            <p>Total Formaciones este mes: <b>${monthData.length}</b></p>
+                            ${detailHtml}
+                            
+                            ${trendHtml}
+                        </body>
+                        </html>
+                    `;
+
+                    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${finalSubject}.doc`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch (e) { console.error(e); Swal.fire('Error Word', e.message, 'error'); }
+            },
+
+            // --- ADMIN PANEL ---
+
+            async apiGetUsers() {
+                const res = await fetch('/api/users');
+                return res.ok ? await res.json() : [];
+            },
+
+            async apiCreateUser(user) {
+                const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
+                if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+            },
+
+            async apiUpdateUser(id, user) {
+                const res = await fetch('/api/users/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
+                if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+            },
+
+            async apiDeleteUserAccount(id) {
+                await fetch('/api/users/' + id, { method: 'DELETE' });
+            },
+
+            async openAdminPanel() {
+                this.adminUsers = await this.apiGetUsers();
+
+                const tableRows = this.adminUsers.map(u => `
+                    <tr class="border-b border-slate-700">
+                        <td class="p-2 text-xs font-mono text-slate-400">${u.username}</td>
+                        <td class="p-2 text-xs uppercase ${u.role === 'admin' ? 'text-indigo-400' : 'text-slate-300'}">${u.role}</td>
+                        <td class="p-2 text-xs text-slate-500">${u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never'}</td>
+                        <td class="p-2 text-right space-x-2">
+                            <button onclick="app.editUserAccount('${u.id}')" class="text-indigo-400 hover:text-indigo-300 transition" title="Editar"><span class="material-icons-round text-sm">edit</span></button>
+                            ${u.username !== 'admin' ? `<button onclick="app.deleteUserAccount('${u.id}')" class="text-red-400 hover:text-red-300 transition" title="Eliminar"><span class="material-icons-round text-sm">delete</span></button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+
+                Swal.fire({
+                    title: 'Gestión de Usuarios',
+                    html: `
+                        <div class="text-left">
+                            <div class="bg-slate-900 rounded-lg p-3 mb-4 border border-slate-700">
+                                <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Crear Nuevo Usuario</h4>
+                                <div class="grid grid-cols-2 gap-2 mb-2">
+                                    <input id="new-user" placeholder="Usuario" class="custom-field h-8 text-xs">
+                                    <input id="new-pass" type="password" placeholder="Contraseña" class="custom-field h-8 text-xs">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <select id="new-role" class="custom-field h-8 text-xs">
+                                        <option value="user">Usuario</option>
+                                        <option value="admin">Administrador</option>
+                                    </select>
+                                    <button onclick="app.createUser()" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-bold transition">Crear</button>
+                                </div>
+                            </div>
+                            <div class="max-h-64 overflow-y-auto border border-slate-700 rounded-lg">
+                                <table class="w-full text-left">
+                                    <thead class="bg-slate-800 text-slate-500 text-xs uppercase sticky top-0">
+                                        <tr><th class="p-2">Usuario</th><th class="p-2">Rol</th><th class="p-2">Acceso</th><th class="p-2 text-right">Acciones</th></tr>
+                                    </thead>
+                                    <tbody class="text-slate-300">
+                                        ${tableRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `,
+                    background: '#1e293b', color: '#fff', showConfirmButton: false, showCloseButton: true, width: '600px'
+                });
+            },
+
+            async createUser() {
+                const username = document.getElementById('new-user').value;
+                const password = document.getElementById('new-pass').value;
+                const role = document.getElementById('new-role').value;
+
+                if (!username || !password) return Swal.showValidationMessage('Faltan datos');
+
+                try {
+                    await this.apiCreateUser({ username, password, role });
+                    this.openAdminPanel(); // Refresh
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: e.message, background: '#1e293b', color: '#fff' });
+                }
+            },
+
+            async editUserAccount(id) {
+                const user = this.adminUsers.find(u => u.id == id);
+                if (!user) return;
+
+                const { value: form } = await Swal.fire({
+                    title: 'Editar Usuario',
+                    html: `
+                        <div class="text-left space-y-3">
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase">Usuario</label>
+                                <input value="${user.username}" disabled class="custom-field opacity-50 cursor-not-allowed">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase">Nueva Contraseña</label>
+                                <input id="edit-pass" type="password" placeholder="Dejar vacía para no cambiar" class="custom-field">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase">Rol</label>
+                                <select id="edit-role" class="custom-field">
+                                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuario</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
+                                </select>
+                            </div>
+                        </div>
+                    `,
+                    background: '#1e293b', color: '#fff', showCancelButton: true, confirmButtonText: 'Guardar', confirmButtonColor: '#indigo-600',
+                    preConfirm: () => {
+                        return {
+                            password: document.getElementById('edit-pass').value,
+                            role: document.getElementById('edit-role').value
+                        };
+                    }
+                });
+
+                if (form) {
+                    try {
+                        await this.apiUpdateUser(id, form);
+                        this.openAdminPanel();
+                    } catch (e) {
+                        Swal.fire({ icon: 'error', title: 'Error', text: e.message, background: '#1e293b', color: '#fff' });
+                    }
+                }
+            },
+
+            async deleteUserAccount(id) {
+                if (await Swal.fire({ title: '¿Eliminar usuario?', icon: 'warning', showCancelButton: true, background: '#1e293b', color: '#fff', confirmButtonColor: '#ef4444' }).then(r => r.isConfirmed)) {
+                    await this.apiDeleteUserAccount(id);
+                    this.openAdminPanel();
+                }
+            },
+
+            logout() {
+                sessionStorage.removeItem('cx_user');
+                window.location.reload();
+            },
+
+            async apiCreateClient(name) {
+                const res = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+                if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+            },
+            async apiDeleteClient(id) {
+                const res = await fetch('/api/clients/' + id, { method: 'DELETE' });
+                if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+            },
+            async openClientManager() {
+                // Fetch fresh list including IDs
+                let clients = [];
+                try {
+                    const res = await fetch('/api/clients');
+                    if (res.ok) clients = await res.json();
+                } catch (e) { console.error(e); }
+
+                const listHtml = clients.map(c => `
+                    <div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-1 border border-slate-700">
+                        <span class="text-white text-xs font-mono">${c.name}</span>
+                        <button onclick="app.deleteClient(${c.id})" class="text-red-400 hover:text-red-300"><span class="material-icons-round text-sm">delete</span></button>
+                    </div>
+                `).join('');
+
+                Swal.fire({
+                    title: 'Gestión de Clientes (Marcas)',
+                    html: `
+                        <div class="text-left">
+                            <div class="flex gap-2 mb-4">
+                                <input id="new-client" class="custom-field h-8 text-xs flex-1" placeholder="Nombre nueva marca...">
+                                <button onclick="app.createClient()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-bold">Crear</button>
+                            </div>
+                            <div class="max-h-60 overflow-y-auto pr-2">
+                                ${listHtml}
+                            </div>
+                        </div>
+                    `,
+                    background: '#1e293b', color: '#fff', showConfirmButton: false, showCloseButton: true
+                });
+            },
+            async createClient() {
+                const name = document.getElementById('new-client').value.trim();
+                if (!name) return;
+                try {
+                    await this.apiCreateClient(name);
+                    await this.fetchClients(); // Refresh global list
+                    this.openClientManager(); // Re-open (refresh UI)
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
+            async deleteClient(id) {
+                if (confirm('¿Eliminar esta marca?')) {
+                    try {
+                        await this.apiDeleteClient(id);
+                        await this.fetchClients();
+                        this.openClientManager();
+                    } catch (e) { Swal.fire('Error', e.message, 'error'); }
+                }
+            },
+
+            showProfile() {
+                if (!this.user) return;
+                const last = this.user.lastLogin ? new Date(this.user.lastLogin).toLocaleString() : 'Ahora';
+                Swal.fire({
+                    title: 'Perfil de Usuario (v.1.1)',
+                    html: `
+                        <div class="space-y-4 text-left">
+                            <div class="flex justify-center mb-4">
+                                <div class="w-20 h-20 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-xl">
+                                    ${this.user.username.charAt(0).toUpperCase()}
+                                </div>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <p class="text-xs uppercase text-slate-500 font-bold mb-1">Usuario</p>
+                                <p class="text-white font-mono">${this.user.username}</p>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <p class="text-xs uppercase text-slate-500 font-bold mb-1">Rol</p>
+                                <p class="text-indigo-400 font-bold uppercase">${this.user.role}</p>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <p class="text-xs uppercase text-slate-500 font-bold mb-1">Último Acceso</p>
+                                <p class="text-slate-300 text-xs">${last}</p>
+                            </div>
+                            ${this.user.role === 'admin' ? `
+                            <div class="mt-4 pt-4 border-t border-slate-700 space-y-2">
+                                <button onclick="Swal.close(); app.openAdminPanel()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold transition">Administrar Usuarios</button>
+                                <button onclick="Swal.close(); app.openClientManager()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold transition">Gestionar Clientes</button>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `,
+                    background: '#1e293b',
+                    color: '#fff',
+                    showDenyButton: true,
+                    denyButtonText: 'Cerrar Sesión',
+                    denyButtonColor: '#ef4444',
+                    confirmButtonText: 'Cerrar',
+                    confirmButtonColor: '#334155'
+                }).then((result) => {
+                    if (result.isDenied) {
+                        this.logout();
+                    }
+                });
+            },
+            resetData() { if (confirm("¿Borrar sistema completo?")) { localStorage.removeItem('db_v47'); location.reload(); } },
+            createModal() { this.openUserModal(); },
+            editUser(id) { this.openUserModal(id); },
+            deleteUser(id) { if (confirm("¿Eliminar comercial?")) { this.db = this.db.filter(u => u.id != id); this.apiDelete(id); this.renderAll(); } },
+
+            generateReport() {
+                try {
+                    const sStr = document.getElementById('range-start').value;
+                    const eStr = document.getElementById('range-end').value;
+                    if (!sStr || !eStr) return;
+                    const data = this.getData();
+                    const s = new Date(sStr); const e = new Date(eStr); e.setHours(23, 59, 59, 999);
+                    let txt = `REPORTE CX CIERRE (${sStr} al ${eStr})\n\n`;
+                    this.clients.forEach(c => {
+                        const frm = data.filter(u => u.marca === c && u.reqFormacion && u.formacion && u.formacion.status === 'Realizada' && new Date(u.formacion.dateCompleted || u.formacion.date) >= s && new Date(u.formacion.dateCompleted || u.formacion.date) <= e).length;
+                        const it = data.filter(u => u.marca === c && u.reqConfig && u.fechaConfig && new Date(u.fechaConfig) >= s && new Date(u.fechaConfig) <= e).length;
+                        if (frm > 0 || it > 0) txt += `- ${c}: ${it} IT / ${frm} Certif.\n`;
+                    });
+                    Swal.fire({ title: 'Resumen Cierre', html: `<textarea class="w-full h-40 bg-slate-900 text-[10px] p-2 font-mono">${txt}</textarea>`, background: '#1e293b' });
+                } catch (e) { Swal.fire('Error Report', e.message, 'error'); }
+            },
+            downloadBillingCSV() {
+                try {
+                    const sStr = document.getElementById('range-start').value;
+                    const eStr = document.getElementById('range-end').value;
+                    if (!sStr || !eStr) return;
+                    const data = this.getData();
+                    const s = new Date(sStr); const e = new Date(eStr); e.setHours(23, 59, 59, 999);
+                    let csv = "\uFEFFConcepto;ID;Marca;Nombre;Teléfono;Concesionario;Fecha\n";
+                    data.forEach(u => {
+                        if (u.reqConfig && u.fechaConfig && new Date(u.fechaConfig) >= s && new Date(u.fechaConfig) <= e) csv += `Config IT;${u.id};${u.marca};${u.nombre};${u.telefono || ''};${u.concesionario};${u.fechaConfig}\n`;
+                        if (u.formacion && u.formacion.status === 'Realizada' && new Date(u.formacion.dateCompleted || u.formacion.date) >= s && new Date(u.formacion.dateCompleted || u.formacion.date) <= e) csv += `Formación;${u.id};${u.marca};${u.nombre};${u.telefono || ''};${u.concesionario};${u.formacion.dateCompleted || u.formacion.date}\n`;
+                    });
+                    const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); l.download = `Cierre_${sStr}.csv`; l.click();
+                } catch (e) { Swal.fire('Error CSV', e.message, 'error'); }
+            },
+
+            generateWordDocAdvanced(sStr, eStr, simulate = false) {
+                try {
+                    const endDate = new Date(eStr);
+                    const targetMonth = endDate.getMonth();
+                    const targetYear = endDate.getFullYear();
+
+                    // Platform Name Logic
+                    let platform = "";
+                    if (this.brand === 'Kia' || this.brand === 'Kia Canarias') platform = "iDealer";
+                    else if (this.brand === 'Hyundai') platform = "SSC";
+
+                    // Month Names
+                    const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+                    const monthName = months[targetMonth];
+
+                    // Data Gathering
+                    const data = this.getData().filter(u => u.formacion && u.formacion.status === 'Realizada');
+
+                    // Filter YTD (Jan to TargetMonth inclusive) for Summary & Chart
+                    const ytdData = data.filter(u => {
+                        const d = new Date(u.formacion.dateCompleted || u.formacion.date);
+                        return d.getFullYear() === targetYear && d.getMonth() <= targetMonth;
+                    });
+
+                    // Chart Simulation & Generation
+                    let maxCount = 0;
+                    const monthlyCounts = [];
+                    // Loop 0-11 for full year chart
+                    for (let m = 0; m < 12; m++) {
+                        let count = ytdData.filter(u => new Date(u.formacion.dateCompleted || u.formacion.date).getMonth() === m).length;
+                        if (simulate) count = Math.floor(Math.random() * 50) + 5;
+                        monthlyCounts.push(count);
+                        if (count > maxCount) maxCount = count;
+                    }
+                    if (maxCount === 0) maxCount = 1;
+
+                    // Chart HTML
+                    let chartHtml = `
+                        <div style="margin-bottom:30px; border:1px solid #ddd; padding:20px; background:#f9f9f9;">
+                            <h3 style="margin:0 0 15px 0; color:#333; text-align:center;">Evolución Anual (${targetYear})</h3>
+                            <table style="width:100%; height:150px; border-collapse:collapse; margin:0 auto;">
+                                <tr style="height:120px; vertical-align:bottom;">
+                    `;
+
+                    const barColor = this.brand === 'Hyundai' ? '#00aad2' : (this.brand === 'Kia' ? '#bb162b' : '#6366f1');
+
+                    for (let m = 0; m < 12; m++) {
+                        const count = monthlyCounts[m];
+                        const pxHeight = Math.round((count / maxCount) * 120);
+                        const finalH = count > 0 && pxHeight < 2 ? 2 : pxHeight;
+
+                        chartHtml += `
+                            <td style="width:8%; text-align:center; vertical-align:bottom; padding:0 2px; height:150px;">
+                                <div style="font-size:8px; color:#555; margin-bottom:2px;">${count > 0 ? count : '&nbsp;'}</div>
+                                ${count > 0 ?
+                                `<table cellspacing="0" cellpadding="0" style="width:80%; margin:0 auto; border-collapse:collapse;">
+                                    <tr><td style="background:${barColor}; height:${finalH}px; font-size:1px; line-height:1px;">&nbsp;</td></tr>
+                                 </table>`
+                                : '<div style="height:1px;">&nbsp;</div>'}
+                            </td>
+                        `;
+                    }
+                    chartHtml += `</tr><tr>`;
+
+                    const shortMonths = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                    for (let m = 0; m < 12; m++) {
+                        chartHtml += `<td style="text-align:center; font-size:9px; color:#666; border-top:1px solid #ccc; padding-top:4px;">${shortMonths[m]}</td>`;
+                    }
+                    chartHtml += `</tr></table></div>`;
+
+                    // --- ANALYSIS SECTION (Advanced: Avg + Rank) ---
+                    let trendHtml = "";
+                    // Allow January (0)
+                    if (targetMonth >= 0) {
+                        const currentC = monthlyCounts[targetMonth];
+
+                        let avgText = "";
+                        let avgIcon = "";
+                        let rankText = "";
+
+                        if (targetMonth === 0) {
+                            // Special Case for January
+                            avgText = "el <b>inicio del ejercicio</b> (sin media previa)";
+                            avgIcon = "🏁";
+                            rankText = "el <b>primer mes</b> del año.";
+                        } else {
+                            // 1. Calculate Average
+                            const prevMonthsCounts = monthlyCounts.slice(0, targetMonth);
+                            const sumPrev = prevMonthsCounts.reduce((a, b) => a + b, 0);
+                            const avgPrev = Math.round(sumPrev / prevMonthsCounts.length);
+
+                            if (avgPrev > 0) {
+                                const diffAvg = currentC - avgPrev;
+                                const pctAvg = Math.round((diffAvg / avgPrev) * 100);
+                                if (pctAvg > 0) {
+                                    avgText = `un <b>${pctAvg}% por encima</b> de la media anual (${avgPrev})`;
+                                    avgIcon = "📈";
+                                } else if (pctAvg < 0) {
+                                    avgText = `un <b>${Math.abs(pctAvg)}% por debajo</b> de la media anual (${avgPrev})`;
+                                    avgIcon = "📉";
+                                } else {
+                                    avgText = `igual a la media anual (${avgPrev})`;
+                                    avgIcon = "=";
+                                }
+                            } else {
+                                avgText = "el primer registro significativo del año";
+                                avgIcon = "🔷";
+                            }
+
+                            // 2. Ranking
+                            const ytdCountsSoFar = monthlyCounts.slice(0, targetMonth + 1);
+                            const sortedCounts = [...ytdCountsSoFar].sort((a, b) => b - a);
+                            const rank = sortedCounts.indexOf(currentC) + 1;
+
+                            if (rank === 1) rankText = "el <b>mejor mes</b> del año hasta la fecha.";
+                            else if (rank === 2) rankText = "el <b>2º mejor mes</b> del año.";
+                            else rankText = `el <b>${rank}º mes</b> en volumen.`;
+                        }
+
+                        trendHtml = `
+                            <br><hr><br>
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:5px;">
+                                <h3 style="margin-top:0; color:#334155;">Análisis Ejecutivo</h3>
+                                <p style="font-size:14px; line-height:1.5;">
+                                    El mes de <b>${monthName}</b> ha cerrado con <b>${currentC} formaciones</b>.
+                                    <br><br>
+                                    ${avgIcon} Se sitúa ${avgText}.
+                                    <br>
+                                    🏆 Representa ${rankText}
+                                </p>
+                            </div>
+                        `;
+                    }
+
+                    // Summary Table Rows
+                    let summaryRows = "";
+                    let totalYTD = 0;
+                    for (let m = 0; m <= targetMonth; m++) {
+                        const c = monthlyCounts[m];
+                        totalYTD += c;
+                        summaryRows += `<tr><td style="padding:5px;border:1px solid #000;">${months[m]}</td><td style="padding:5px;border:1px solid #000;">${c}</td></tr>`;
+                    }
+                    summaryRows += `<tr style="font-weight:bold;background:#eee;"><td style="padding:5px;border:1px solid #000;">Total Acumulado</td><td style="padding:5px;border:1px solid #000;">${totalYTD}</td></tr>`;
+
+                    // Detailed Breakdown for Target Month
+                    const monthData = ytdData.filter(u => new Date(u.formacion.dateCompleted || u.formacion.date).getMonth() === targetMonth);
+                    // Group by Dealer
+                    const byDealer = {};
+                    monthData.forEach(u => {
+                        if (!byDealer[u.concesionario]) byDealer[u.concesionario] = [];
+                        byDealer[u.concesionario].push(u);
+                    });
+
+                    let detailHtml = "";
+                    Object.keys(byDealer).sort().forEach(d => {
+                        const users = byDealer[d];
+                        detailHtml += `<h3 style="margin-top:20px;border-bottom:1px solid #ccc;">${d} (${users.length})</h3>`;
+                        detailHtml += `<table style="width:100%;border-collapse:collapse;margin-bottom:10px;">`;
+                        detailHtml += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:5px;border:1px solid #ddd;">Fecha</th><th style="text-align:left;padding:5px;border:1px solid #ddd;">Comercial</th></tr>`;
+                        users.forEach(u => {
+                            const dStr = new Date(u.formacion.dateCompleted || u.formacion.date).toLocaleDateString();
+                            detailHtml += `<tr><td style="padding:5px;border:1px solid #ddd;">${dStr}</td><td style="padding:5px;border:1px solid #ddd;">${u.nombre} ${u.apellidos}</td></tr>`;
+                        });
+                        detailHtml += `</table>`;
+                    });
+
+                    const brandName = this.brand === 'all' ? 'Todas' : this.brand;
+                    const finalSubject = `Formacion Uso Plataforma ${brandName} ${platform} ${monthName} ${targetYear}`;
+
+
+                    const html = `
+                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                        <head><meta charset='utf-8'><title>${finalSubject}</title></head>
+                        <body style="font-family: Calibri, sans-serif;">
+                            <p>Os adjuntamos el informe detallado del número total de usuarios formados en <b>${brandName}</b> en el mes de <b>${monthName}</b>.</p>
+                            
+                            <br>
+                            
+                            ${chartHtml}
+                            
+                            <table style="width:50%;border-collapse:collapse;border:1px solid #000;">
+                                <tr style="background:#334155;color:#fff;">
+                                    <th style="padding:5px;border:1px solid #000;">Mes</th>
+                                    <th style="padding:5px;border:1px solid #000;">Nº Formaciones</th>
+                                </tr>
+                                ${summaryRows}
+                            </table>
+                            
+                            <br>
+                            <hr>
+                            <h2>Desglose Detallado (${monthName})</h2>
+                            <p>Total Formaciones este mes: <b>${monthData.length}</b></p>
+                            ${detailHtml}
+                            
+                            ${trendHtml}
+                        </body>
+                        </html>
+                    `;
+
+                    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${finalSubject}.doc`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch (e) { console.error(e); Swal.fire('Error Word', e.message, 'error'); }
+            }
+        };
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+
+</html>
