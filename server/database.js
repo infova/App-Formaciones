@@ -106,8 +106,7 @@ async function initializeDatabase() {
 
 // Initialize on module load
 initializeDatabase().catch(err => {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
+  console.error('Failed to initialize database (Server still running for debug):', err);
 });
 
 module.exports = pool;
