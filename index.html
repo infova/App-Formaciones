@@ -285,41 +285,29 @@
                             class="bg-slate-900 border border-slate-600 rounded-full px-4 py-1.5 text-xs text-white w-72 outline-none focus:border-indigo-500 transition">
                     </div>
                 </div>
-                <div class="kanban-wrapper flex gap-4 h-full" id="kanban-container">
-                    <div class="kanban-column flex-1">
+                <div class="kanban-wrapper h-full" id="kanban-container">
+                    <div class="kanban-column">
                         <div class="kanban-header text-slate-400 border-b-4 border-slate-500">PENDIENTE <span
                                 id="count-pendiente" class="text-[10px] bg-slate-700 px-2 rounded">0</span></div>
-                        <div id="col-pendiente" class="kanban-body h-full overflow-y-auto" data-status="Pendiente">
-                        </div>
+                        <div id="col-pendiente" class="kanban-body" data-status="Pendiente"></div>
                     </div>
-                    <div class="kanban-column flex-1">
+                    <div class="kanban-column">
                         <div class="kanban-header text-amber-500 border-b-4 border-amber-500">CONVOCADA <span
                                 id="count-convocada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-convocada" class="kanban-body h-full overflow-y-auto" data-status="Convocada">
-                        </div>
+                        <div id="col-convocada" class="kanban-body" data-status="Convocada"></div>
                     </div>
-                    <div class="kanban-column flex-1">
+                    <div class="kanban-column">
                         <div class="kanban-header text-indigo-400 border-b-4 border-indigo-400">CONFIRMADA <span
                                 id="count-confirmada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-confirmada" class="kanban-body h-full overflow-y-auto" data-status="Confirmada">
-                        </div>
+                        <div id="col-confirmada" class="kanban-body" data-status="Confirmada"></div>
                     </div>
-                    <div class="kanban-column flex-1">
+                    <div class="kanban-column">
                         <div class="kanban-header text-emerald-400 border-b-4 border-emerald-400">REALIZADA <span
                                 id="count-realizada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-realizada" class="kanban-body h-full overflow-y-auto" data-status="Realizada">
-                        </div>
-                    </div>
-                    <div class="kanban-column flex-1 border-red-500/30">
-                        <div class="kanban-header text-red-500 border-b-4 border-red-500 uppercase">No Presentados/No
-                            realizados <span id="count-norealizada"
-                                class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
-                        </div>
-                        <div id="col-norealizada" class="kanban-body h-full overflow-y-auto" data-status="No Realizada">
-                        </div>
+                        <div id="col-realizada" class="kanban-body" data-status="Realizada"></div>
                     </div>
                 </div>
             </div>
@@ -456,6 +444,10 @@
                     const res = await fetch('api/records.php');
                     if (res.ok) {
                         this.db = await res.json();
+                        // Ensure serial is set for compatibility
+                        this.db.forEach(u => {
+                            if (!u.serial && u.tabletSN) u.serial = u.tabletSN;
+                        });
                         this.renderAll();
                     }
                 } catch (e) { console.error(e); }
@@ -592,22 +584,7 @@
                         labels: ['Cambio Titular iPad', 'Nueva Licencia', 'Acceso Informes'],
                         datasets: [{ data: [iPadOwnershipChanges, newCloudLicenses, infoAccess], backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6'], borderWidth: 0 }]
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        layout: { padding: { top: 10, bottom: 50, left: 10, right: 10 } },
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: '#94a3b8',
-                                    font: { size: 9 },
-                                    usePointStyle: true,
-                                    padding: 5
-                                }
-                            }
-                        }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 9 }, usePointStyle: true, padding: 15 } } } }
                 });
 
                 if (this.chartBrands) this.chartBrands.destroy();
@@ -630,17 +607,7 @@
                             const d = new Date(u.formacion.dateCompleted || u.formacion.date);
                             const m = d.getMonth(); if (m >= 0 && m < 12) mDots[m]++;
                         });
-                        const color = this.getColorForBrand(c);
-                        ds.push({
-                            label: c,
-                            data: mDots,
-                            tension: 0.3,
-                            pointRadius: 0,
-                            borderWidth: (ctx) => app.getChartWidth(ctx),
-                            borderColor: (ctx) => app.getChartColor(ctx),
-                            originalColor: color,
-                            order: (ctx) => app.getChartOrder(ctx)
-                        });
+                        ds.push({ label: c, data: mDots, borderColor: this.getColorForBrand(c), backgroundColor: this.getColorForBrand(c), tension: 0.3, borderWidth: 2, pointRadius: 3, hoverBorderWidth: 4 });
                     });
                 } else {
                     const mDots = Array(12).fill(0);
@@ -663,84 +630,71 @@
                                 onClick: (e, legendItem, legend) => {
                                     const index = legendItem.datasetIndex;
                                     const ci = legend.chart;
-                                    if (!ci.selectedIndices) ci.selectedIndices = [];
-                                    const sIdx = ci.selectedIndices.indexOf(index);
-                                    if (sIdx > -1) {
-                                        ci.selectedIndices.splice(sIdx, 1);
+                                    const visibleCount = ci.data.datasets.filter((_, i) => ci.isDatasetVisible(i)).length;
+                                    const isOnlyTargetVisible = visibleCount === 1 && ci.isDatasetVisible(index);
+
+                                    if (isOnlyTargetVisible) {
+                                        // Si solo está visible la seleccionada, resetear a todas
+                                        ci.data.datasets.forEach((_, i) => ci.setDatasetVisibility(i, true));
                                     } else {
-                                        ci.selectedIndices.push(index);
+                                        // Si hay varias o ninguna, dejar solo la seleccionada
+                                        ci.data.datasets.forEach((_, i) => ci.setDatasetVisibility(i, i === index));
                                     }
-                                    ci.update('none');
+                                    ci.update();
                                 }
                             },
                             tooltip: { backgroundColor: '#1e293b', titleColor: '#fff', bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1 }
                         },
-                        onClick: (e, chartElement) => {
-                            const chart = e.chart;
-                            if (!chart.selectedIndices) chart.selectedIndices = [];
+                        onHover: (event, chartElement) => {
+                            const chart = event.chart;
+                            const newHoveredIndex = chartElement.length > 0 ? chartElement[0].datasetIndex : null;
 
-                            if (chartElement.length > 0) {
-                                const idx = chartElement[0].datasetIndex;
-                                const sIdx = chart.selectedIndices.indexOf(idx);
-                                if (sIdx > -1) {
-                                    chart.selectedIndices.splice(sIdx, 1);
-                                } else {
-                                    chart.selectedIndices.push(idx);
-                                }
-                            } else {
-                                chart.selectedIndices = [];
-                                app.resetAnnualChart();
+                            if (chart.hoveredIndex !== newHoveredIndex) {
+                                chart.hoveredIndex = newHoveredIndex;
+                                chart.update('none');
                             }
-                            chart.update('none');
+                        },
+                        onClick: (e, chartElement) => {
+                            if (chartElement.length === 0) app.resetAnnualChart();
                         },
                         scales: {
                             y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true },
                             x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } }
                         }
-                    }
+                    },
+                    plugins: [{
+                        id: 'glowFocus',
+                        beforeDatasetDraw: (chart, args) => {
+                            const ctx = chart.ctx;
+                            const idx = args.index;
+                            const hIdx = chart.hoveredIndex;
+
+                            ctx.save();
+                            if (hIdx !== null) {
+                                if (idx === hIdx) {
+                                    // Highlighted line
+                                    ctx.shadowBlur = 15;
+                                    ctx.shadowColor = chart.data.datasets[idx].borderColor;
+                                    ctx.globalAlpha = 1.0;
+                                } else {
+                                    // Faded lines
+                                    ctx.globalAlpha = 0.1;
+                                }
+                            } else {
+                                ctx.globalAlpha = 1.0;
+                            }
+                        },
+                        afterDatasetDraw: (chart) => {
+                            chart.ctx.restore();
+                        }
+                    }]
                 });
             },
-
-            getChartColor(context) {
-                const chart = context.chart;
-                const idx = context.datasetIndex;
-                const sel = chart.selectedIndices || [];
-
-                if (sel.length > 0) {
-                    if (sel.includes(idx)) return context.dataset.originalColor;
-                    return '#33415520';
-                }
-                return context.dataset.originalColor;
-            },
-
-            getChartWidth(context) {
-                const chart = context.chart;
-                const idx = context.datasetIndex;
-                const sel = chart.selectedIndices || [];
-
-                if (sel.length > 0) {
-                    if (sel.includes(idx)) return 4;
-                    return 1;
-                }
-                return 2;
-            },
-
-            getChartOrder(context) {
-                const chart = context.chart;
-                const idx = context.datasetIndex;
-                const sel = chart.selectedIndices || [];
-
-                if (sel.length > 0 && sel.includes(idx)) return -1;
-                return 0;
-            },
-
 
             resetAnnualChart() {
                 if (!this.chartAnnual) return;
                 this.chartAnnual.data.datasets.forEach((_, i) => this.chartAnnual.setDatasetVisibility(i, true));
                 this.chartAnnual.hoveredIndex = null;
-                this.chartAnnual.selectedIndex = null;
-                this.chartAnnual.selectedIndices = [];
                 this.chartAnnual.update();
             },
 
@@ -754,7 +708,7 @@
             renderIT() {
                 const list = this.getData().filter(u => u.reqConfig === true);
                 const search = document.getElementById('search-it').value.toLowerCase();
-                document.getElementById('it-body').innerHTML = list.filter(u => this.matchesSearch(u, search)).map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.tabletSN || u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-2" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
+                document.getElementById('it-body').innerHTML = list.filter(u => this.matchesSearch(u, search)).map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-2" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
             },
 
             renderInformes() {
@@ -763,48 +717,27 @@
             },
 
             initKanban() {
-                ['col-pendiente', 'col-convocada', 'col-confirmada', 'col-realizada', 'col-norealizada'].forEach(id => {
-                    const el = document.getElementById(id); if (el && el._sortable) el._sortable.destroy();
-                    if (el) el._sortable = new Sortable(el, { group: 'kanban', animation: 150, onEnd: (evt) => app.handleKanbanDrop(evt) });
+                ['col-pendiente', 'col-convocada', 'col-confirmada', 'col-realizada'].forEach(id => {
+                    const el = document.getElementById(id); if (el._sortable) el._sortable.destroy();
+                    el._sortable = new Sortable(el, { group: 'kanban', animation: 150, onEnd: (evt) => app.handleKanbanDrop(evt) });
                 });
             },
 
             renderKanban() {
                 const search = document.getElementById('search-kanban').value.toLowerCase();
-                ['Pendiente', 'Convocada', 'Confirmada', 'Realizada', 'No Realizada'].forEach(s => {
-                    const idStr = s.toLowerCase().replace(/ /g, '');
-                    const col = document.getElementById('col-' + idStr);
-                    if (!col) return;
-                    col.innerHTML = '';
-
+                ['Pendiente', 'Convocada', 'Confirmada', 'Realizada'].forEach(s => {
+                    const col = document.getElementById('col-' + s.toLowerCase()); col.innerHTML = '';
                     const users = this.getData().filter(u => u.reqFormacion && u.formacion.status === s && this.matchesSearch(u, search));
-                    const countEl = document.getElementById('count-' + idStr);
-                    if (countEl) countEl.innerText = users.length;
-
+                    document.getElementById('count-' + s.toLowerCase()).innerText = users.length;
                     users.forEach(u => {
                         const daysWait = Math.floor((new Date() - new Date(u.fechaAlta)) / (1000 * 60 * 60 * 24));
                         const isRealizada = s === 'Realizada';
-                        const isNoRealizada = s === 'No Realizada';
-
                         const card = document.createElement('div');
-                        let cardClass = `kanban-card p-3 mb-2 rounded border border-slate-700 shadow-md ${u.marca === 'Kia' ? 'border-l-red-500' : (u.marca === 'Hyundai' ? 'border-l-blue-900' : 'border-l-indigo-500')}`;
-
-                        card.className = cardClass;
+                        card.className = `kanban-card p-3 mb-2 rounded border border-slate-700 shadow-md ${u.marca === 'Kia' ? 'border-l-red-500' : (u.marca === 'Hyundai' ? 'border-l-blue-900' : 'border-l-indigo-500')}`;
                         card.setAttribute('data-id', u.id);
 
                         if (isRealizada) {
                             card.innerHTML = `<div class="flex justify-between items-center"><h4 class="text-xs font-bold text-white truncate w-32 uppercase">${u.nombre} ${u.apellidos}</h4><span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">${this.formatDateEU(u.formacion.date)}</span></div>`;
-                        } else if (isNoRealizada) {
-                            card.innerHTML = `
-                                <div class="text-xs font-bold text-slate-300 uppercase truncate mb-1 line-through decoration-slate-500">${u.nombre} ${u.apellidos}</div>
-                                <div class="text-[9px] text-slate-400 uppercase truncate mb-2">${u.concesionario}</div>
-                                <div class="flex justify-between items-center border-t border-slate-700 pt-2">
-                                    <div class="flex gap-2">
-                                        <button onclick="app.editUser('${u.id}')" class="text-slate-500 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
-                                        <button onclick="app.deleteUser('${u.id}')" class="text-slate-500 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
-                                    </div>
-                                    <span class="text-[9px] text-red-500/70 font-bold">NO SHOW</span>
-                                </div>`;
                         } else {
                             card.innerHTML = `
                                 <div class="text-xs font-bold text-white uppercase truncate mb-1">${u.nombre} ${u.apellidos}</div>
@@ -880,7 +813,7 @@
                                         <option value="Licencia Cloud" ${user?.tipoAcceso === 'Licencia Cloud' ? 'selected' : ''}>Licencia Cloud</option>
                                         <option value="Acceso a informes" ${user?.tipoAcceso === 'Acceso a informes' ? 'selected' : ''}>Acceso a informes</option>
                                     </select>
-                                    <input id="sw-serial" value="${user?.tabletSN || user?.serial || ''}" placeholder="S/N Tablet" class="custom-field border-blue-500/50" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
+                                    <input id="sw-serial" value="${user?.serial || ''}" placeholder="S/N Tablet" class="custom-field border-blue-500/50" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
                                 </div>
                                 <div id="div-prev" class="mt-2" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
                                     <input id="sw-prev" value="${user?.usuarioAnterior || ''}" placeholder="Comercial Anterior" class="custom-field border-amber-500/50">
@@ -920,7 +853,7 @@
                         const brandVal = document.getElementById('sw-brand').value;
                         if (!idVal) return Swal.showValidationMessage('ID obligatorio');
                         if (!brandVal) return Swal.showValidationMessage('Debes seleccionar una Marca');
-                        return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: document.getElementById('sw-brand').value, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, tabletSN: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
+                        return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: document.getElementById('sw-brand').value, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, serial: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
                     }
                 });
                 if (form) { if (id) { const i = this.db.findIndex(u => u.id == id); this.db[i] = form; await this.apiUpdate(form); } else { this.db.push(form); await this.apiCreate(form); } this.renderAll(); }
@@ -948,7 +881,7 @@ Apellidos: ${u.apellidos}
 Email: ${u.email}
 Concesionario: ${u.concesionario}
 Tipo Acceso: ${u.tipoAcceso}
-${u.tabletSN || u.serial ? `S/N Tablet: ${u.tabletSN || u.serial}` : ''}
+${u.serial ? `S/N Tablet: ${u.serial}` : ''}
 ${u.usuarioAnterior ? `Comercial Anterior: ${u.usuarioAnterior}` : ''}
 ---------------------------------------------
 
@@ -1605,6 +1538,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         concesionario,
                         tipoAcceso: tipoAcceso || 'Ventas',
                         tabletSN: tabletSN || '',
+                        serial: tabletSN || '',
                         comercialAnterior: comercialAnterior || '',
                         reqFormacion: parseBool(reqFormacion),
                         reqConfig: parseBool(reqConfig),
@@ -1729,6 +1663,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         concesionario,
                         tipoAcceso: tipoAcceso || 'Tablet',
                         tabletSN: tabletSN || '',
+                        serial: tabletSN || '',
                         comercialAnterior: comercialAnterior || '',
                         reqFormacion: parseBool(reqFormacion),
                         reqConfig: parseBool(reqConfig),
