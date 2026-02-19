@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CX Solution | Login</title>
+    <title>iDealer Onboarding | Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -17,9 +17,9 @@
         <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
         <div class="text-center mb-8">
-            <div
-                class="w-16 h-16 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-xl mx-auto flex items-center justify-center shadow-lg border border-white/10 mb-4">
-                <span class="text-white font-extrabold text-2xl">CX</span>
+            <div class="mb-4 flex items-center justify-center">
+                <img src="img/logo_horizontal.png" alt="iDealer Onboarding Logo"
+                    class="max-w-[240px] w-full h-auto object-contain">
             </div>
             <h1 class="text-2xl font-bold text-white tracking-tight">Bienvenido</h1>
             <p class="text-slate-400 text-sm mt-1">Inicia sesión para continuar</p>
@@ -44,8 +44,8 @@
             </button>
         </form>
 
-        <p class="text-center text-[10px] text-slate-600 mt-6">
-            CX Solution V47 • Operativo Pro <br>
+        <p class="text-center text-[10px] text-slate-600 mt-6 font-bold uppercase tracking-widest">
+            iDealer Onboarding • Panel Operativo <br>
             Protected System
         </p>
     </div>
@@ -70,7 +70,7 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    sessionStorage.setItem('cx_user', JSON.stringify(data.user));
+                    sessionStorage.setItem('idealer_user', JSON.stringify(data.user));
                     setTimeout(() => window.location.href = '/', 500);
                 } else {
                     Swal.fire({

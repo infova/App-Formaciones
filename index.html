@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CX Solution V47 | Operativo Pro</title>
+    <title>iDealer Onboarding | Panel Operativo</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Immediate Auth Check
-        if (!sessionStorage.getItem('cx_user')) {
+        if (!sessionStorage.getItem('idealer_user')) {
             window.location.href = 'login.html';
         }
 
@@ -44,21 +44,18 @@
 
     <!-- SIDEBAR -->
     <aside class="w-72 bg-sidebar border-r border-slate-700/50 flex flex-col z-20 shadow-2xl flex-shrink-0">
-        <div class="p-6 border-b border-slate-700/50 flex items-center gap-3">
-            <div
-                class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg border border-white/10">
-                CX</div>
-            <div>
-                <h1 class="font-bold text-white text-sm tracking-wide">CX Solution</h1>
-                <p class="text-[10px] text-slate-400">Panel Operativo <span
-                        class="text-indigo-400 font-bold ml-1">v.1.5</span></p>
+        <div class="p-6 border-b border-slate-700/50 flex flex-col items-center gap-2">
+            <img src="img/logo_horizontal.png" alt="iDealer Onboarding" class="h-10 w-auto object-contain">
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <h1 class="font-bold text-gray-400 text-[11px] tracking-wide">By CXSolutions <span
+                        class="text-indigo-400 font-bold ml-1">v.1.6</span></h1>
             </div>
         </div>
 
         <div class="px-6 py-4 border-b border-slate-700/50">
             <label class="text-[10px] uppercase text-slate-500 font-bold tracking-wider mb-2 block">Año Fiscal</label>
             <select id="global-year" onchange="app.renderAll()"
-                class="w-full bg-slate-900 border border-slate-600 text-white text-sm rounded-lg p-2 focus:border-indigo-500 outline-none cursor-pointer">
+                class="w-full bg-slate-900 border border-slate-600 text-white text-sm rounded-lg p-2 focus:border-indigo-500 outline-none cursor-pointer mb-2">
                 <option value="all">Histórico Completo</option>
                 <option value="2026" selected>2026</option>
                 <option value="2027">2027</option>
@@ -68,6 +65,39 @@
                 <option value="2031">2031</option>
                 <option value="2032">2032</option>
                 <option value="2033">2033</option>
+                <option value="2034">2034</option>
+                <option value="2035">2035</option>
+                <option value="2036">2036</option>
+                <option value="2037">2037</option>
+                <option value="2038">2038</option>
+                <option value="2039">2039</option>
+                <option value="2040">2040</option>
+                <option value="2041">2041</option>
+                <option value="2042">2042</option>
+                <option value="2043">2043</option>
+                <option value="2044">2044</option>
+                <option value="2045">2045</option>
+                <option value="2046">2046</option>
+                <option value="2047">2047</option>
+                <option value="2048">2048</option>
+                <option value="2049">2049</option>
+                <option value="2050">2050</option>
+            </select>
+            <select id="global-month" onchange="app.renderAll()"
+                class="w-full bg-slate-900 border border-slate-600 text-white text-sm rounded-lg p-2 focus:border-indigo-500 outline-none cursor-pointer">
+                <option value="all" selected>Todos los meses</option>
+                <option value="0">Enero</option>
+                <option value="1">Febrero</option>
+                <option value="2">Marzo</option>
+                <option value="3">Abril</option>
+                <option value="4">Mayo</option>
+                <option value="5">Junio</option>
+                <option value="6">Julio</option>
+                <option value="7">Agosto</option>
+                <option value="8">Septiembre</option>
+                <option value="9">Octubre</option>
+                <option value="10">Noviembre</option>
+                <option value="11">Diciembre</option>
             </select>
         </div>
 
@@ -154,39 +184,14 @@
                 </div>
 
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <!-- iPad Configuraciones -->
+                    <!-- iPad Pendientes -->
                     <div
-                        class="bg-sidebar p-4 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
+                        class="bg-sidebar p-4 rounded-xl border border-amber-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
                         <div
                             class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-                            <span class="material-icons-round text-[110px] text-emerald-400">tablet_mac</span>
+                            <span class="material-icons-round text-[110px] text-amber-400">phonelink_setup</span>
                         </div>
-                        <p class="text-emerald-400 text-[10px] font-bold uppercase relative z-10">iPad configurados</p>
-                        <h3 class="text-3xl font-bold text-white relative z-10" id="res-config">0</h3>
-                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Cambios de titularidad
-                        </p>
-                    </div>
-                    <!-- Usuarios Certificados -->
-                    <div
-                        class="bg-sidebar p-4 rounded-xl border border-indigo-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
-                        <div
-                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-                            <span class="material-icons-round text-[110px] text-indigo-400">school</span>
-                        </div>
-                        <p class="text-indigo-400 text-[10px] font-bold uppercase relative z-10">Usuarios Certificados
-                        </p>
-                        <h3 class="text-3xl font-bold text-white relative z-10" id="res-formed">0</h3>
-                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Formaciones realizadas
-                        </p>
-                    </div>
-                    <!-- Pendiente IT -->
-                    <div
-                        class="bg-sidebar p-4 rounded-xl border border-red-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
-                        <div
-                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-                            <span class="material-icons-round text-[110px] text-red-400">phonelink_setup</span>
-                        </div>
-                        <p class="text-red-400 text-[10px] font-bold uppercase relative z-10">Pendiente IT</p>
+                        <p class="text-amber-400 text-[10px] font-bold uppercase relative z-10">iPad Pendientes</p>
                         <h3 class="text-3xl font-bold text-white relative z-10" id="kpi-it">0</h3>
                         <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Por configurar</p>
                     </div>
@@ -200,6 +205,31 @@
                         <p class="text-amber-400 text-[10px] font-bold uppercase relative z-10">Pendiente Formar</p>
                         <h3 class="text-3xl font-bold text-white relative z-10" id="kpi-train-pending">0</h3>
                         <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Por certificar</p>
+                    </div>
+                    <!-- iPad Configuraciones -->
+                    <div
+                        class="bg-sidebar p-4 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+                            <span class="material-icons-round text-[110px] text-emerald-400">tablet_mac</span>
+                        </div>
+                        <p class="text-emerald-400 text-[10px] font-bold uppercase relative z-10">iPad configurados</p>
+                        <h3 class="text-3xl font-bold text-white relative z-10" id="res-config">0</h3>
+                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Cambios de titularidad
+                        </p>
+                    </div>
+                    <!-- Usuarios Formados -->
+                    <div
+                        class="bg-sidebar p-4 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+                            <span class="material-icons-round text-[110px] text-emerald-400">school</span>
+                        </div>
+                        <p class="text-emerald-400 text-[10px] font-bold uppercase relative z-10">Usuarios Formados
+                        </p>
+                        <h3 class="text-3xl font-bold text-white relative z-10" id="res-formed">0</h3>
+                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Formaciones realizadas
+                        </p>
                     </div>
                 </div>
 
@@ -253,8 +283,14 @@
             <div id="view-it" class="hidden">
                 <div class="bg-sidebar rounded-xl border border-slate-700 p-6 shadow-xl">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-white font-bold text-lg">Control Hardware</h3><input id="search-it"
-                            onkeyup="app.renderIT()" placeholder="Buscar comercial o S/N..."
+                        <div class="flex items-center gap-4">
+                            <h3 class="text-white font-bold text-lg">Configuración IPad</h3>
+                            <button onclick="app.nav('it-archived')"
+                                class="bg-amber-600/20 text-amber-500 border border-amber-500/30 hover:bg-amber-600/30 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-2">
+                                <span class="material-icons-round text-sm">history</span> Configuraciones Archivadas
+                            </button>
+                        </div>
+                        <input id="search-it" onkeyup="app.renderIT()" placeholder="Buscar comercial o S/N..."
                             class="bg-slate-900 border border-slate-600 rounded px-4 py-2 text-sm text-white w-64 outline-none">
                     </div>
                     <table class="w-full text-sm text-slate-300">
@@ -262,11 +298,40 @@
                             <tr>
                                 <th class="p-3 text-left">Usuario</th>
                                 <th class="p-3 text-left">Concesionario</th>
+                                <th class="p-3 text-center">Días Alta</th>
                                 <th class="p-3 text-left">Estado IT</th>
                                 <th class="p-3 text-right">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="it-body" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW IT ARCHIVED -->
+            <div id="view-it-archived" class="hidden">
+                <div class="bg-sidebar rounded-xl border border-slate-700 p-6 shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-4">
+                            <button onclick="app.nav('it')" class="text-slate-400 hover:text-white transition">
+                                <span class="material-icons-round">arrow_back</span>
+                            </button>
+                            <h3 class="text-white font-bold text-lg">Histórico de Configuraciones IT</h3>
+                        </div>
+                        <input id="search-it-archived" onkeyup="app.renderITArchived()"
+                            placeholder="Buscar en el archivo..."
+                            class="bg-slate-900 border border-slate-600 rounded px-4 py-2 text-sm text-white w-64 outline-none">
+                    </div>
+                    <table class="w-full text-sm text-slate-300">
+                        <thead class="text-xs uppercase bg-slate-800 text-slate-500">
+                            <tr>
+                                <th class="p-3 text-left">Usuario</th>
+                                <th class="p-3 text-left">Nº Serie</th>
+                                <th class="p-3 text-left">Motivo de Archivado</th>
+                                <th class="p-3 text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="it-archived-body" class="divide-y divide-slate-700/50"></tbody>
                     </table>
                 </div>
             </div>
@@ -285,29 +350,41 @@
                             class="bg-slate-900 border border-slate-600 rounded-full px-4 py-1.5 text-xs text-white w-72 outline-none focus:border-indigo-500 transition">
                     </div>
                 </div>
-                <div class="kanban-wrapper h-full" id="kanban-container">
-                    <div class="kanban-column">
+                <div class="kanban-wrapper flex gap-4 h-full" id="kanban-container">
+                    <div class="kanban-column flex-1">
                         <div class="kanban-header text-slate-400 border-b-4 border-slate-500">PENDIENTE <span
                                 id="count-pendiente" class="text-[10px] bg-slate-700 px-2 rounded">0</span></div>
-                        <div id="col-pendiente" class="kanban-body" data-status="Pendiente"></div>
+                        <div id="col-pendiente" class="kanban-body h-full overflow-y-auto" data-status="Pendiente">
+                        </div>
                     </div>
-                    <div class="kanban-column">
+                    <div class="kanban-column flex-1">
                         <div class="kanban-header text-amber-500 border-b-4 border-amber-500">CONVOCADA <span
                                 id="count-convocada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-convocada" class="kanban-body" data-status="Convocada"></div>
+                        <div id="col-convocada" class="kanban-body h-full overflow-y-auto" data-status="Convocada">
+                        </div>
                     </div>
-                    <div class="kanban-column">
+                    <div class="kanban-column flex-1">
                         <div class="kanban-header text-indigo-400 border-b-4 border-indigo-400">CONFIRMADA <span
                                 id="count-confirmada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-confirmada" class="kanban-body" data-status="Confirmada"></div>
+                        <div id="col-confirmada" class="kanban-body h-full overflow-y-auto" data-status="Confirmada">
+                        </div>
                     </div>
-                    <div class="kanban-column">
+                    <div class="kanban-column flex-1">
                         <div class="kanban-header text-emerald-400 border-b-4 border-emerald-400">REALIZADA <span
                                 id="count-realizada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-realizada" class="kanban-body" data-status="Realizada"></div>
+                        <div id="col-realizada" class="kanban-body h-full overflow-y-auto" data-status="Realizada">
+                        </div>
+                    </div>
+                    <div class="kanban-column flex-1 border-red-500/30">
+                        <div class="kanban-header text-red-500 border-b-4 border-red-500 uppercase">No Presentados/No
+                            realizados <span id="count-norealizada"
+                                class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
+                        </div>
+                        <div id="col-norealizada" class="kanban-body h-full overflow-y-auto" data-status="No Realizada">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -394,7 +471,7 @@
             clients: [], // Will fetch from API
 
             async init() {
-                const u = sessionStorage.getItem('cx_user');
+                const u = sessionStorage.getItem('idealer_user');
                 if (!u) { window.location.href = 'login.html'; return; }
                 this.user = JSON.parse(u);
 
@@ -444,10 +521,6 @@
                     const res = await fetch('api/records.php');
                     if (res.ok) {
                         this.db = await res.json();
-                        // Ensure serial is set for compatibility
-                        this.db.forEach(u => {
-                            if (!u.serial && u.tabletSN) u.serial = u.tabletSN;
-                        });
                         this.renderAll();
                     }
                 } catch (e) { console.error(e); }
@@ -461,8 +534,24 @@
             },
 
             formatDateEU(iso) { if (!iso) return ''; const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; },
+            formatDateTimeEU(iso) {
+                if (!iso) return '';
+                const d = new Date(iso);
+                const date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                const time = iso.includes('T') ? d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                return time ? `${date} ${time}` : date;
+            },
             isoToInput(iso) { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); },
             getTimeFromDate(iso) { if (!iso || !iso.includes('T')) return '--:--'; return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); },
+            getDaysSince(dateStr) {
+                if (!dateStr) return 0;
+                const start = new Date(dateStr);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                start.setHours(0, 0, 0, 0);
+                const diffTime = Math.abs(today - start);
+                return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            },
 
             renderFilters() {
                 const container = document.getElementById('brand-filters');
@@ -480,8 +569,12 @@
 
             nav(view) {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-slate-800', 'text-white'));
-                document.getElementById('nav-' + view).classList.add('bg-slate-800', 'text-white');
-                ['dashboard', 'it', 'kanban', 'informes'].forEach(v => document.getElementById('view-' + v).classList.add('hidden'));
+                const navEl = document.getElementById('nav-' + (view === 'it-archived' ? 'it' : view));
+                if (navEl) navEl.classList.add('bg-slate-800', 'text-white');
+                ['dashboard', 'it', 'it-archived', 'kanban', 'informes'].forEach(v => {
+                    const el = document.getElementById('view-' + v);
+                    if (el) el.classList.add('hidden');
+                });
                 document.getElementById('view-' + view).classList.remove('hidden');
                 document.getElementById('page-title').innerText = view.toUpperCase();
                 this.renderAll();
@@ -489,7 +582,23 @@
             },
 
             setFilter(brand) { this.brand = brand; this.renderFilters(); this.renderAll(); },
-            getData() { return this.db.filter(u => (this.year === 'all' || u.year === this.year) && (this.brand === 'all' || u.marca === this.brand)); },
+            getData() {
+                return this.db.filter(u => {
+                    const yearMatch = (this.year === 'all' || u.year === this.year);
+                    const brandMatch = (this.brand === 'all' || u.marca === this.brand);
+                    let monthMatch = true;
+                    if (this.month !== 'all') {
+                        const targetDate = u.formacion.date || u.fechaAlta;
+                        if (targetDate) {
+                            const d = new Date(targetDate);
+                            monthMatch = d.getMonth().toString() === this.month;
+                        } else {
+                            monthMatch = false;
+                        }
+                    }
+                    return yearMatch && brandMatch && monthMatch;
+                });
+            },
 
             matchesSearch(u, search) {
                 if (!search) return true;
@@ -498,15 +607,19 @@
                     (u.nombre || '').toString().toLowerCase().includes(s) ||
                     (u.apellidos || '').toString().toLowerCase().includes(s) ||
                     (u.concesionario || '').toString().toLowerCase().includes(s) ||
-                    (u.serial || '').toString().toLowerCase().includes(s);
+                    (u.serial || '').toString().toLowerCase().includes(s) ||
+                    (u.tabletSN || '').toString().toLowerCase().includes(s) ||
+                    (u.motivoArchivado || '').toString().toLowerCase().includes(s);
             },
 
             renderAll() {
                 this.year = document.getElementById('global-year').value;
+                this.month = document.getElementById('global-month').value;
                 this.updateSidebarStats();
                 if (!document.getElementById('view-dashboard').classList.contains('hidden')) this.renderDashboard();
                 if (!document.getElementById('view-informes').classList.contains('hidden')) this.renderInformes();
                 if (!document.getElementById('view-it').classList.contains('hidden')) this.renderIT();
+                if (!document.getElementById('view-it-archived').classList.contains('hidden')) this.renderITArchived();
                 if (!document.getElementById('view-kanban').classList.contains('hidden')) this.renderKanban();
             },
 
@@ -571,7 +684,7 @@
                 document.getElementById('res-config').innerText = cnf;
                 document.getElementById('res-formed').innerText = frm;
                 document.getElementById('kpi-it').innerText = data.filter(u => u.reqConfig && !u.fechaConfig).length;
-                document.getElementById('kpi-train-pending').innerText = data.filter(u => u.reqFormacion && u.formacion.status !== 'Realizada').length;
+                document.getElementById('kpi-train-pending').innerText = data.filter(u => u.reqFormacion && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').length;
 
                 const pct = data.filter(u => u.reqFormacion).length > 0 ? Math.round((data.filter(u => u.reqFormacion && u.formacion.status === 'Realizada').length / data.filter(u => u.reqFormacion).length) * 100) : 0;
                 document.getElementById('progress-text').innerText = pct + '%';
@@ -581,10 +694,25 @@
                 this.chartDist = new Chart(document.getElementById('chart-dist'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Cambio Titular iPad', 'Nueva Licencia', 'Acceso Informes'],
+                        labels: ['Cambio Titular iPad', 'Nueva Licencia', 'Formación General'],
                         datasets: [{ data: [iPadOwnershipChanges, newCloudLicenses, infoAccess], backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6'], borderWidth: 0 }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 9 }, usePointStyle: true, padding: 15 } } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: { padding: { top: 10, bottom: 50, left: 10, right: 10 } },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#94a3b8',
+                                    font: { size: 9 },
+                                    usePointStyle: true,
+                                    padding: 5
+                                }
+                            }
+                        }
+                    }
                 });
 
                 if (this.chartBrands) this.chartBrands.destroy();
@@ -592,7 +720,7 @@
                     type: 'bar', data: { labels: this.clients, datasets: [{ label: 'Pendientes', data: this.clients.map(c => data.filter(u => u.marca === c && u.reqFormacion && u.formacion.status !== 'Realizada').length), backgroundColor: '#6366f1', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true }, x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } } }
                 });
 
-                const sch = data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada').sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date)).slice(0, 5);
+                const sch = data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date));
                 document.getElementById('list-agenda').innerHTML = sch.map(u => `<div class="flex items-center gap-2 p-1.5 bg-slate-800/50 rounded border border-slate-700 text-[10px]"><div class="bg-indigo-600 text-white px-2 py-1 rounded font-bold text-center leading-none">${new Date(u.formacion.date).getDate()}<br><small>${new Date(u.formacion.date).toLocaleString('es', { month: 'short' }).toUpperCase()}</small></div><div class="flex-1 truncate"><p class="text-white font-bold truncate uppercase">${u.nombre} ${u.apellidos}</p><p class="text-slate-400 truncate uppercase">${u.marca}</p></div><div class="text-indigo-300 font-mono">${this.getTimeFromDate(u.formacion.date)}</div></div>`).join('');
 
                 // LÓGICA GRÁFICO ANUAL
@@ -607,7 +735,17 @@
                             const d = new Date(u.formacion.dateCompleted || u.formacion.date);
                             const m = d.getMonth(); if (m >= 0 && m < 12) mDots[m]++;
                         });
-                        ds.push({ label: c, data: mDots, borderColor: this.getColorForBrand(c), backgroundColor: this.getColorForBrand(c), tension: 0.3, borderWidth: 2, pointRadius: 3, hoverBorderWidth: 4 });
+                        const color = this.getColorForBrand(c);
+                        ds.push({
+                            label: c,
+                            data: mDots,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: (ctx) => app.getChartWidth(ctx),
+                            borderColor: (ctx) => app.getChartColor(ctx),
+                            originalColor: color,
+                            order: (ctx) => app.getChartOrder(ctx)
+                        });
                     });
                 } else {
                     const mDots = Array(12).fill(0);
@@ -630,71 +768,84 @@
                                 onClick: (e, legendItem, legend) => {
                                     const index = legendItem.datasetIndex;
                                     const ci = legend.chart;
-                                    const visibleCount = ci.data.datasets.filter((_, i) => ci.isDatasetVisible(i)).length;
-                                    const isOnlyTargetVisible = visibleCount === 1 && ci.isDatasetVisible(index);
-
-                                    if (isOnlyTargetVisible) {
-                                        // Si solo está visible la seleccionada, resetear a todas
-                                        ci.data.datasets.forEach((_, i) => ci.setDatasetVisibility(i, true));
+                                    if (!ci.selectedIndices) ci.selectedIndices = [];
+                                    const sIdx = ci.selectedIndices.indexOf(index);
+                                    if (sIdx > -1) {
+                                        ci.selectedIndices.splice(sIdx, 1);
                                     } else {
-                                        // Si hay varias o ninguna, dejar solo la seleccionada
-                                        ci.data.datasets.forEach((_, i) => ci.setDatasetVisibility(i, i === index));
+                                        ci.selectedIndices.push(index);
                                     }
-                                    ci.update();
+                                    ci.update('none');
                                 }
                             },
                             tooltip: { backgroundColor: '#1e293b', titleColor: '#fff', bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1 }
                         },
-                        onHover: (event, chartElement) => {
-                            const chart = event.chart;
-                            const newHoveredIndex = chartElement.length > 0 ? chartElement[0].datasetIndex : null;
-
-                            if (chart.hoveredIndex !== newHoveredIndex) {
-                                chart.hoveredIndex = newHoveredIndex;
-                                chart.update('none');
-                            }
-                        },
                         onClick: (e, chartElement) => {
-                            if (chartElement.length === 0) app.resetAnnualChart();
+                            const chart = e.chart;
+                            if (!chart.selectedIndices) chart.selectedIndices = [];
+
+                            if (chartElement.length > 0) {
+                                const idx = chartElement[0].datasetIndex;
+                                const sIdx = chart.selectedIndices.indexOf(idx);
+                                if (sIdx > -1) {
+                                    chart.selectedIndices.splice(sIdx, 1);
+                                } else {
+                                    chart.selectedIndices.push(idx);
+                                }
+                            } else {
+                                chart.selectedIndices = [];
+                                app.resetAnnualChart();
+                            }
+                            chart.update('none');
                         },
                         scales: {
                             y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true },
                             x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } }
                         }
-                    },
-                    plugins: [{
-                        id: 'glowFocus',
-                        beforeDatasetDraw: (chart, args) => {
-                            const ctx = chart.ctx;
-                            const idx = args.index;
-                            const hIdx = chart.hoveredIndex;
-
-                            ctx.save();
-                            if (hIdx !== null) {
-                                if (idx === hIdx) {
-                                    // Highlighted line
-                                    ctx.shadowBlur = 15;
-                                    ctx.shadowColor = chart.data.datasets[idx].borderColor;
-                                    ctx.globalAlpha = 1.0;
-                                } else {
-                                    // Faded lines
-                                    ctx.globalAlpha = 0.1;
-                                }
-                            } else {
-                                ctx.globalAlpha = 1.0;
-                            }
-                        },
-                        afterDatasetDraw: (chart) => {
-                            chart.ctx.restore();
-                        }
-                    }]
+                    }
                 });
             },
+
+            getChartColor(context) {
+                const chart = context.chart;
+                const idx = context.datasetIndex;
+                const sel = chart.selectedIndices || [];
+
+                if (sel.length > 0) {
+                    if (sel.includes(idx)) return context.dataset.originalColor;
+                    return '#33415520';
+                }
+                return context.dataset.originalColor;
+            },
+
+            getChartWidth(context) {
+                const chart = context.chart;
+                const idx = context.datasetIndex;
+                const sel = chart.selectedIndices || [];
+
+                if (sel.length > 0) {
+                    if (sel.includes(idx)) return 4;
+                    return 1;
+                }
+                return 2;
+            },
+
+            getChartOrder(context) {
+                const chart = context.chart;
+                const idx = context.datasetIndex;
+                const sel = chart.selectedIndices || [];
+
+                if (sel.length > 0 && sel.includes(idx)) return -1;
+                return 0;
+            },
+
 
             resetAnnualChart() {
                 if (!this.chartAnnual) return;
                 this.chartAnnual.data.datasets.forEach((_, i) => this.chartAnnual.setDatasetVisibility(i, true));
                 this.chartAnnual.hoveredIndex = null;
+                this.chartAnnual.selectedIndex = null;
+                this.chartAnnual.selectedIndices = [];
                 this.chartAnnual.update();
             },
 
@@ -706,49 +857,150 @@
             },
 
             renderIT() {
-                const list = this.getData().filter(u => u.reqConfig === true);
+                const list = this.getData().filter(u => u.reqConfig === true && !u.isArchived);
                 const search = document.getElementById('search-it').value.toLowerCase();
-                document.getElementById('it-body').innerHTML = list.filter(u => this.matchesSearch(u, search)).map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-2" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
+                document.getElementById('it-body').innerHTML = list.filter(u => this.matchesSearch(u, search)).map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.tabletSN || u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3 text-center"><div class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-indigo-500/50 text-indigo-400 font-bold text-xs">${this.getDaysSince(u.fechaAlta)}</div></td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-2" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.archiveUserIT('${u.id}')" class="bg-amber-600/20 text-amber-500 px-2 py-1 rounded transition text-xs font-bold uppercase border border-amber-500/30 hover:bg-amber-600/30" title="Archivar"><span class="material-icons-round text-sm">inventory_2</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
+            },
+
+            async archiveUserIT(id) {
+                const user = this.db.find(u => u.id == id);
+                const { value: form } = await Swal.fire({
+                    title: 'Archivar Configuración IT',
+                    html: `<div class="text-left text-xs text-slate-400 mb-2">Indica el motivo por el cual archivas a este comercial:</div>
+                           <input id="sw-arch-date" type="date" class="swal2-input text-sm" value="${new Date().toISOString().split('T')[0]}">
+                           <textarea id="sw-arch-motive" class="swal2-textarea text-sm" placeholder="Motivo del archivado..."></textarea>`,
+                    background: '#1e293b', color: '#fff',
+                    showCancelButton: true, confirmButtonColor: '#d97706',
+                    preConfirm: () => {
+                        return {
+                            date: document.getElementById('sw-arch-date').value,
+                            motive: document.getElementById('sw-arch-motive').value
+                        }
+                    }
+                });
+
+                if (form) {
+                    user.isArchived = true;
+                    user.fechaArchivado = form.date;
+                    user.motivoArchivado = form.motive;
+                    await this.apiUpdate(user);
+                    this.renderAll();
+                    Swal.fire({ icon: 'success', title: 'Usuario Archivado', background: '#1e293b', color: '#fff' });
+                }
+            },
+
+            async unarchiveUserIT(id) {
+                const user = this.db.find(u => u.id == id);
+                const result = await Swal.fire({
+                    title: '¿Desarchivar usuario?',
+                    text: "El comercial volverá a la lista activa de IT",
+                    icon: 'question',
+                    showCancelButton: true,
+                    background: '#1e293b', color: '#fff',
+                    confirmButtonColor: '#6366f1'
+                });
+
+                if (result.isConfirmed) {
+                    user.isArchived = false;
+                    await this.apiUpdate(user);
+                    this.renderAll();
+                    this.renderITArchived();
+                }
+            },
+
+            renderITArchived() {
+                const list = this.db.filter(u => u.isArchived === true);
+                const search = document.getElementById('search-it-archived').value.toLowerCase();
+                const filtered = list.filter(u => this.matchesSearch(u, search) || (u.motivoArchivado && u.motivoArchivado.toLowerCase().includes(search)));
+
+                document.getElementById('it-archived-body').innerHTML = filtered.map(u => `
+                    <tr>
+                        <td class="p-3">
+                            <b>${u.nombre} ${u.apellidos}</b><br>
+                            <small class="text-slate-500 uppercase">${u.concesionario}</small>
+                        </td>
+                        <td class="p-3 font-mono text-xs text-slate-400">${u.tabletSN || u.serial || 'S/N'}</td>
+                        <td class="p-3">
+                            <div class="text-[9px] text-slate-500 font-bold">Formación General</div>
+                            <div class="text-[10px] text-slate-400 mb-1 uppercase font-bold">${u.fechaArchivado || ''}</div>
+                            <div class="text-xs text-slate-300 italic">"${u.motivoArchivado || 'Sin motivo'}"</div>
+                        </td>
+                        <td class="p-3 text-right">
+                            <button onclick="app.unarchiveUserIT('${u.id}')" class="bg-indigo-600/20 text-indigo-400 border border-indigo-400/30 px-2 py-1 rounded text-[10px] font-bold uppercase transition hover:bg-indigo-600/30">Desarchivar</button>
+                        </td>
+                    </tr>
+                `).join('');
             },
 
             renderInformes() {
                 const search = document.getElementById('search-data').value.toLowerCase();
-                document.getElementById('data-body').innerHTML = this.getData().filter(u => this.matchesSearch(u, search)).map(u => `<tr class="border-b border-slate-800"><td class="p-3 font-mono text-xs text-slate-400">${u.id}</td><td class="p-3 text-xs text-slate-300 uppercase font-medium">${u.nombre} ${u.apellidos}</td><td class="p-3 uppercase text-xs">${u.marca}</td><td class="p-3 text-xs uppercase">${u.concesionario}</td><td class="p-3 text-xs uppercase text-indigo-300">${u.tipoAcceso}</td><td class="p-3 text-xs uppercase">${u.reqFormacion ? (u.formacion.status === 'Realizada' ? '✅ OK' : u.formacion.status) : 'No req'}</td><td class="p-3 text-xs uppercase">${u.reqConfig ? (u.fechaConfig ? '✅ OK' : 'Pendiente') : 'No req'}</td><td class="p-3 text-right flex justify-end gap-2"><button onclick="app.editUser('${u.id}')" class="text-slate-400 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button><button onclick="app.deleteUser('${u.id}')" class="text-slate-400 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button></td></tr>`).join('');
+                document.getElementById('data-body').innerHTML = this.getData().filter(u => this.matchesSearch(u, search)).map(u => {
+                    let itStatus = 'No req';
+                    if (u.reqConfig) {
+                        if (u.isArchived) itStatus = '<span class="text-amber-500 font-bold">Archivado</span>';
+                        else if (u.fechaConfig) itStatus = '✅ OK';
+                        else itStatus = 'Pendiente';
+                    }
+
+                    return `<tr class="border-b border-slate-800"><td class="p-3 font-mono text-xs text-slate-400">${u.id}</td><td class="p-3 text-xs text-slate-300 uppercase font-medium">${u.nombre} ${u.apellidos}</td><td class="p-3 uppercase text-xs">${u.marca}</td><td class="p-3 text-xs uppercase">${u.concesionario}</td><td class="p-3 text-xs uppercase text-indigo-300">${u.tipoAcceso}</td><td class="p-3 text-xs uppercase">${u.reqFormacion ? (u.formacion.status === 'Realizada' ? '✅ OK' : u.formacion.status) : 'No req'}</td><td class="p-3 text-xs uppercase">${itStatus}</td><td class="p-3 text-right flex justify-end gap-2"><button onclick="app.editUser('${u.id}')" class="text-slate-400 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button><button onclick="app.deleteUser('${u.id}')" class="text-slate-400 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button></td></tr>`;
+                }).join('');
             },
 
             initKanban() {
-                ['col-pendiente', 'col-convocada', 'col-confirmada', 'col-realizada'].forEach(id => {
-                    const el = document.getElementById(id); if (el._sortable) el._sortable.destroy();
-                    el._sortable = new Sortable(el, { group: 'kanban', animation: 150, onEnd: (evt) => app.handleKanbanDrop(evt) });
+                ['col-pendiente', 'col-convocada', 'col-confirmada', 'col-realizada', 'col-norealizada'].forEach(id => {
+                    const el = document.getElementById(id); if (el && el._sortable) el._sortable.destroy();
+                    if (el) el._sortable = new Sortable(el, { group: 'kanban', animation: 150, onEnd: (evt) => app.handleKanbanDrop(evt) });
                 });
             },
 
             renderKanban() {
                 const search = document.getElementById('search-kanban').value.toLowerCase();
-                ['Pendiente', 'Convocada', 'Confirmada', 'Realizada'].forEach(s => {
-                    const col = document.getElementById('col-' + s.toLowerCase()); col.innerHTML = '';
+                ['Pendiente', 'Convocada', 'Confirmada', 'Realizada', 'No Realizada'].forEach(s => {
+                    const idStr = s.toLowerCase().replace(/ /g, '');
+                    const col = document.getElementById('col-' + idStr);
+                    if (!col) return;
+                    col.innerHTML = '';
+
                     const users = this.getData().filter(u => u.reqFormacion && u.formacion.status === s && this.matchesSearch(u, search));
-                    document.getElementById('count-' + s.toLowerCase()).innerText = users.length;
+                    const countEl = document.getElementById('count-' + idStr);
+                    if (countEl) countEl.innerText = users.length;
+
                     users.forEach(u => {
                         const daysWait = Math.floor((new Date() - new Date(u.fechaAlta)) / (1000 * 60 * 60 * 24));
                         const isRealizada = s === 'Realizada';
+                        const isNoRealizada = s === 'No Realizada';
+
                         const card = document.createElement('div');
-                        card.className = `kanban-card p-3 mb-2 rounded border border-slate-700 shadow-md ${u.marca === 'Kia' ? 'border-l-red-500' : (u.marca === 'Hyundai' ? 'border-l-blue-900' : 'border-l-indigo-500')}`;
+                        let cardClass = `kanban-card p-3 mb-2 rounded border border-slate-700 shadow-md ${u.marca === 'Kia' ? 'border-l-red-500' : (u.marca === 'Hyundai' ? 'border-l-blue-900' : 'border-l-indigo-500')}`;
+
+                        card.className = cardClass;
                         card.setAttribute('data-id', u.id);
 
                         if (isRealizada) {
                             card.innerHTML = `<div class="flex justify-between items-center"><h4 class="text-xs font-bold text-white truncate w-32 uppercase">${u.nombre} ${u.apellidos}</h4><span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">${this.formatDateEU(u.formacion.date)}</span></div>`;
-                        } else {
+                        } else if (isNoRealizada) {
                             card.innerHTML = `
-                                <div class="text-xs font-bold text-white uppercase truncate mb-1">${u.nombre} ${u.apellidos}</div>
+                                <div class="text-xs font-bold text-slate-300 uppercase truncate mb-1 line-through decoration-slate-500">${u.nombre} ${u.apellidos}</div>
                                 <div class="text-[9px] text-slate-400 uppercase truncate mb-2">${u.concesionario}</div>
                                 <div class="flex justify-between items-center border-t border-slate-700 pt-2">
                                     <div class="flex gap-2">
                                         <button onclick="app.editUser('${u.id}')" class="text-slate-500 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
-                                        <button onclick="event.stopPropagation(); app.sendEmail('${u.id}')" class="text-slate-500 hover:text-white transition" title="Email"><span class="material-icons-round text-sm">mail</span></button>
                                         <button onclick="app.deleteUser('${u.id}')" class="text-slate-500 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
                                     </div>
-                                    <span class="text-[9px] text-slate-500 font-bold">${u.formacion.date ? this.formatDateEU(u.formacion.date) : ''}</span>
+                                    <span class="text-[9px] text-red-500/70 font-bold">NO SHOW</span>
+                                </div>`;
+                        } else {
+                            card.innerHTML = `
+                                <div class="text-xs font-bold text-white uppercase truncate mb-1">${u.nombre} ${u.apellidos}</div>
+                                <div class="text-[9px] text-slate-400 uppercase truncate mb-2">${u.concesionario}</div>
+                                <div class="flex items-center justify-between gap-1 mb-2">
+                                    <div class="flex gap-1">
+                                        <button onclick="app.editUser('${u.id}')" class="text-slate-400 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
+                                        <button onclick="app.sendITEmail('${u.id}')" class="text-slate-400 hover:text-indigo-400 transition"><span class="material-icons-round text-sm">mail</span></button>
+                                        <button onclick="app.deleteUser('${u.id}')" class="text-slate-400 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
+                                    </div>
+                                    <div class="w-7 h-7 rounded-full border border-indigo-500/40 flex items-center justify-center text-[10px] font-bold text-indigo-300 bg-indigo-500/5" title="Días desde el alta">${this.getDaysSince(u.fechaAlta)}</div>
+                                    <div class="text-[9px] font-mono text-slate-500">${this.formatDateTimeEU(u.formacion.date || u.formacion.dateCompleted)}</div>
                                 </div>`;
                         }
                         col.appendChild(card);
@@ -811,9 +1063,9 @@
                                     <select id="sw-type" class="custom-field" onchange="window.toggleFields(this.value)">
                                         <option value="Tablet" ${user?.tipoAcceso === 'Tablet' ? 'selected' : ''}>Tablet</option>
                                         <option value="Licencia Cloud" ${user?.tipoAcceso === 'Licencia Cloud' ? 'selected' : ''}>Licencia Cloud</option>
-                                        <option value="Acceso a informes" ${user?.tipoAcceso === 'Acceso a informes' ? 'selected' : ''}>Acceso a informes</option>
+                                        <option value="Acceso a informes" ${user?.tipoAcceso === 'Acceso a informes' ? 'selected' : ''}>Formación General</option>
                                     </select>
-                                    <input id="sw-serial" value="${user?.serial || ''}" placeholder="S/N Tablet" class="custom-field border-blue-500/50" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
+                                    <input id="sw-serial" value="${user?.tabletSN || user?.serial || ''}" placeholder="S/N Tablet" class="custom-field border-blue-500/50" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
                                 </div>
                                 <div id="div-prev" class="mt-2" style="display:${user?.tipoAcceso === 'Tablet' ? 'block' : 'none'}">
                                     <input id="sw-prev" value="${user?.usuarioAnterior || ''}" placeholder="Comercial Anterior" class="custom-field border-amber-500/50">
@@ -853,7 +1105,7 @@
                         const brandVal = document.getElementById('sw-brand').value;
                         if (!idVal) return Swal.showValidationMessage('ID obligatorio');
                         if (!brandVal) return Swal.showValidationMessage('Debes seleccionar una Marca');
-                        return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: document.getElementById('sw-brand').value, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, serial: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
+                        return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: document.getElementById('sw-brand').value, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, tabletSN: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
                     }
                 });
                 if (form) { if (id) { const i = this.db.findIndex(u => u.id == id); this.db[i] = form; await this.apiUpdate(form); } else { this.db.push(form); await this.apiCreate(form); } this.renderAll(); }
@@ -880,8 +1132,8 @@ Nombre: ${u.nombre}
 Apellidos: ${u.apellidos}
 Email: ${u.email}
 Concesionario: ${u.concesionario}
-Tipo Acceso: ${u.tipoAcceso}
-${u.serial ? `S/N Tablet: ${u.serial}` : ''}
+Tipo Acceso: ${u.tipoAcceso === 'Acceso a informes' ? 'Formación General' : u.tipoAcceso}
+${u.tabletSN || u.serial ? `S/N Tablet: ${u.tabletSN || u.serial}` : ''}
 ${u.usuarioAnterior ? `Comercial Anterior: ${u.usuarioAnterior}` : ''}
 ---------------------------------------------
 
@@ -1375,7 +1627,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
             },
 
             logout() {
-                sessionStorage.removeItem('cx_user');
+                sessionStorage.removeItem('idealer_user');
                 window.location.reload();
             },
 
@@ -1538,7 +1790,6 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         concesionario,
                         tipoAcceso: tipoAcceso || 'Ventas',
                         tabletSN: tabletSN || '',
-                        serial: tabletSN || '',
                         comercialAnterior: comercialAnterior || '',
                         reqFormacion: parseBool(reqFormacion),
                         reqConfig: parseBool(reqConfig),
@@ -1663,7 +1914,6 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         concesionario,
                         tipoAcceso: tipoAcceso || 'Tablet',
                         tabletSN: tabletSN || '',
-                        serial: tabletSN || '',
                         comercialAnterior: comercialAnterior || '',
                         reqFormacion: parseBool(reqFormacion),
                         reqConfig: parseBool(reqConfig),

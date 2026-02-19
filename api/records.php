@@ -48,7 +48,6 @@ switch ($method) {
                         $oldData['concesionario'] = $r['concesionario'] ?? $oldData['concesionario'];
                         $oldData['tipoAcceso'] = $r['tipoAcceso'] ?? $oldData['tipoAcceso'];
                         $oldData['tabletSN'] = $r['tabletSN'] ?? ($oldData['tabletSN'] ?? '');
-                        $oldData['serial'] = $r['serial'] ?? ($oldData['serial'] ?? '');
                         $oldData['comercialAnterior'] = $r['comercialAnterior'] ?? ($oldData['comercialAnterior'] ?? '');
                         $oldData['reqFormacion'] = $r['reqFormacion'];
                         $oldData['reqConfig'] = $r['reqConfig'];
