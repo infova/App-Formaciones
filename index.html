@@ -107,7 +107,7 @@
                     class="material-icons-round">speed</span> Dashboard</button>
             <button onclick="app.nav('it')" id="nav-it"
                 class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-400"><span
-                    class="material-icons-round">devices</span> Configuración IT</button>
+                    class="material-icons-round">devices</span> Configuración de iPad</button>
             <button onclick="app.nav('kanban')" id="nav-kanban"
                 class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-400"><span
                     class="material-icons-round">view_kanban</span> Formación</button>
@@ -284,14 +284,28 @@
                 <div class="bg-sidebar rounded-xl border border-slate-700 p-6 shadow-xl">
                     <div class="flex justify-between items-center mb-6">
                         <div class="flex items-center gap-4">
-                            <h3 class="text-white font-bold text-lg">Configuración IPad</h3>
+                            <h3 class="text-white font-bold text-lg">Configuración de iPad</h3>
                             <button onclick="app.nav('it-archived')"
                                 class="bg-amber-600/20 text-amber-500 border border-amber-500/30 hover:bg-amber-600/30 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-2">
                                 <span class="material-icons-round text-sm">history</span> Configuraciones Archivadas
                             </button>
                         </div>
-                        <input id="search-it" onkeyup="app.renderIT()" placeholder="Buscar comercial o S/N..."
-                            class="bg-slate-900 border border-slate-600 rounded px-4 py-2 text-sm text-white w-64 outline-none">
+                        <div class="flex items-center gap-3">
+                            <select id="filter-it-status" onchange="app.renderIT()" class="bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white outline-none">
+                                <option value="all">Todos</option>
+                                <option value="pending">Pendientes</option>
+                                <option value="configured">Configurados</option>
+                            </select>
+                            <div class="flex gap-2">
+                                <input type="date" id="filter-it-start" onchange="app.renderIT()" class="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-xs text-white outline-none">
+                                <input type="date" id="filter-it-end" onchange="app.renderIT()" class="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-xs text-white outline-none">
+                            </div>
+                            <input id="search-it" onkeyup="app.renderIT()" placeholder="Buscar comercial o S/N..."
+                                class="bg-slate-900 border border-slate-600 rounded px-4 py-2 text-sm text-white w-56 outline-none">
+                            <button onclick="app.exportITCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded text-sm font-bold transition flex items-center gap-2">
+                                <span class="material-icons-round text-sm">download</span> Exportar
+                            </button>
+                        </div>
                     </div>
                     <table class="w-full text-sm text-slate-300">
                         <thead class="text-xs uppercase bg-slate-800 text-slate-500">
@@ -300,6 +314,7 @@
                                 <th class="p-3 text-left">Concesionario</th>
                                 <th class="p-3 text-center">Días Alta</th>
                                 <th class="p-3 text-left">Estado IT</th>
+                                <th class="p-3 text-left">Comentarios</th>
                                 <th class="p-3 text-right">Acción</th>
                             </tr>
                         </thead>
@@ -553,6 +568,13 @@
                 return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             },
 
+            getUserInitials(username) {
+                if (!username) return '';
+                const clean = username.trim().toLowerCase();
+                if (clean.length <= 2) return clean;
+                return clean.substring(0, 2);
+            },
+
             renderFilters() {
                 const container = document.getElementById('brand-filters');
                 let html = `<button onclick="app.setFilter('all')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase ${this.brand === 'all' ? 'btn-active' : 'btn-inactive'}">Todos</button>`;
@@ -600,16 +622,17 @@
                 });
             },
 
-            matchesSearch(u, search) {
+            matchesSearch(u, search, context = 'all') {
                 if (!search) return true;
                 const s = search.trim().toLowerCase();
-                return (u.id || '').toString().toLowerCase().includes(s) ||
-                    (u.nombre || '').toString().toLowerCase().includes(s) ||
-                    (u.apellidos || '').toString().toLowerCase().includes(s) ||
-                    (u.concesionario || '').toString().toLowerCase().includes(s) ||
-                    (u.serial || '').toString().toLowerCase().includes(s) ||
-                    (u.tabletSN || '').toString().toLowerCase().includes(s) ||
-                    (u.motivoArchivado || '').toString().toLowerCase().includes(s);
+                let searchObj = u;
+                if (context === 'it') {
+                    searchObj = { ...u };
+                    delete searchObj.formacion;
+                }
+                let str = JSON.stringify(searchObj).toLowerCase();
+                if (context === 'it' && !u.fechaConfig) str += " pendiente";
+                return str.includes(s);
             },
 
             renderAll() {
@@ -721,43 +744,121 @@
                 });
 
                 const sch = data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date));
-                document.getElementById('list-agenda').innerHTML = sch.map(u => `<div class="flex items-center gap-2 p-1.5 bg-slate-800/50 rounded border border-slate-700 text-[10px]"><div class="bg-indigo-600 text-white px-2 py-1 rounded font-bold text-center leading-none">${new Date(u.formacion.date).getDate()}<br><small>${new Date(u.formacion.date).toLocaleString('es', { month: 'short' }).toUpperCase()}</small></div><div class="flex-1 truncate"><p class="text-white font-bold truncate uppercase">${u.nombre} ${u.apellidos}</p><p class="text-slate-400 truncate uppercase">${u.marca}</p></div><div class="text-indigo-300 font-mono">${this.getTimeFromDate(u.formacion.date)}</div></div>`).join('');
+                document.getElementById('list-agenda').innerHTML = sch.map(u => {
+                    const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
+                    return `
+                    <div class="flex items-center gap-2 p-1.5 bg-slate-800/50 rounded border border-slate-700 text-[10px] relative group">
+                        <div class="bg-indigo-600 text-white px-2 py-1 rounded font-bold text-center leading-none">
+                            ${new Date(u.formacion.date).getDate()}<br>
+                            <small>${new Date(u.formacion.date).toLocaleString('es', { month: 'short' }).toUpperCase()}</small>
+                        </div>
+                        <div class="flex-1 truncate">
+                            <p class="text-white font-bold truncate uppercase">${u.nombre} ${u.apellidos}</p>
+                            <p class="text-slate-400 truncate uppercase">${u.marca}</p>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <div class="text-indigo-300 font-bold antialiased text-[10px]">${this.getTimeFromDate(u.formacion.date)}</div>
+                            <div class="text-[8px] font-bold px-1.5 py-0.5 rounded shadow-lg text-white uppercase tracking-tighter" style="background: ${this.getColorForString(assignee)}" title="Asignado por: ${assignee}">${this.getUserInitials(assignee)}</div>
+                        </div>
+                    </div>`;
+                }).join('');
 
                 // LÓGICA GRÁFICO ANUAL
                 if (this.chartAnnual) this.chartAnnual.destroy();
-                const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                const yearData = this.db.filter(u => u.year == this.year && u.formacion.status === 'Realizada');
+                const monthsBase = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                
+                let labelsLine = [];
                 let ds = [];
-                if (this.brand === 'all') {
-                    this.clients.forEach(c => {
+
+                if (this.year === 'all') {
+                    // Histórico Completo: Rango continuo de meses desde la formación más antigua a la más nueva
+                    const allCompleted = this.db.filter(u => u.formacion && u.formacion.status === 'Realizada' && (u.formacion.dateCompleted || u.formacion.date));
+                    if (allCompleted.length > 0) {
+                        const dates = allCompleted.map(u => new Date(u.formacion.dateCompleted || u.formacion.date));
+                        let minDate = new Date(Math.min(...dates));
+                        let maxDate = new Date(Math.max(...dates));
+                        
+                        // Asegurar al menos el mes actual si maxDate está en el pasado
+                        const now = new Date();
+                        if (maxDate < now) maxDate = now;
+
+                        // Construir timeline continuo
+                        let currYear = minDate.getFullYear();
+                        let currMonth = minDate.getMonth();
+                        const endYear = maxDate.getFullYear();
+                        const endMonth = maxDate.getMonth();
+
+                        while (currYear < endYear || (currYear === endYear && currMonth <= endMonth)) {
+                            labelsLine.push(`${monthsBase[currMonth]} ${currYear}`);
+                            currMonth++;
+                            if (currMonth > 11) {
+                                currMonth = 0;
+                                currYear++;
+                            }
+                        }
+
+                        // Poblar datos
+                        if (this.brand === 'all') {
+                            this.clients.forEach(c => {
+                                const mDots = Array(labelsLine.length).fill(0);
+                                allCompleted.filter(u => u.marca === c).forEach(u => {
+                                    const d = new Date(u.formacion.dateCompleted || u.formacion.date);
+                                    const label = `${monthsBase[d.getMonth()]} ${d.getFullYear()}`;
+                                    const idx = labelsLine.indexOf(label);
+                                    if (idx !== -1) mDots[idx]++;
+                                });
+                                const color = this.getColorForBrand(c);
+                                ds.push({
+                                    label: c, data: mDots, tension: 0.3, pointRadius: 0,
+                                    borderWidth: (ctx) => app.getChartWidth(ctx),
+                                    borderColor: (ctx) => app.getChartColor(ctx),
+                                    originalColor: color, order: (ctx) => app.getChartOrder(ctx)
+                                });
+                            });
+                        } else {
+                            const mDots = Array(labelsLine.length).fill(0);
+                            allCompleted.filter(u => u.marca === this.brand).forEach(u => {
+                                const d = new Date(u.formacion.dateCompleted || u.formacion.date);
+                                const label = `${monthsBase[d.getMonth()]} ${d.getFullYear()}`;
+                                const idx = labelsLine.indexOf(label);
+                                if (idx !== -1) mDots[idx]++;
+                            });
+                            ds.push({ label: this.brand, data: mDots, backgroundColor: this.getColorForBrand(this.brand), borderRadius: 4 });
+                        }
+                    }
+                } else {
+                    // Año Específico: 12 meses fijos
+                    labelsLine = [...monthsBase];
+                    const yearData = this.db.filter(u => u.year == this.year && u.formacion.status === 'Realizada');
+                    
+                    if (this.brand === 'all') {
+                        this.clients.forEach(c => {
+                            const mDots = Array(12).fill(0);
+                            yearData.filter(u => u.marca === c).forEach(u => {
+                                const d = new Date(u.formacion.dateCompleted || u.formacion.date);
+                                const m = d.getMonth(); if (m >= 0 && m < 12) mDots[m]++;
+                            });
+                            const color = this.getColorForBrand(c);
+                            ds.push({
+                                label: c, data: mDots, tension: 0.3, pointRadius: 0,
+                                borderWidth: (ctx) => app.getChartWidth(ctx),
+                                borderColor: (ctx) => app.getChartColor(ctx),
+                                originalColor: color, order: (ctx) => app.getChartOrder(ctx)
+                            });
+                        });
+                    } else {
                         const mDots = Array(12).fill(0);
-                        yearData.filter(u => u.marca === c).forEach(u => {
+                        yearData.filter(u => u.marca === this.brand).forEach(u => {
                             const d = new Date(u.formacion.dateCompleted || u.formacion.date);
                             const m = d.getMonth(); if (m >= 0 && m < 12) mDots[m]++;
                         });
-                        const color = this.getColorForBrand(c);
-                        ds.push({
-                            label: c,
-                            data: mDots,
-                            tension: 0.3,
-                            pointRadius: 0,
-                            borderWidth: (ctx) => app.getChartWidth(ctx),
-                            borderColor: (ctx) => app.getChartColor(ctx),
-                            originalColor: color,
-                            order: (ctx) => app.getChartOrder(ctx)
-                        });
-                    });
-                } else {
-                    const mDots = Array(12).fill(0);
-                    yearData.filter(u => u.marca === this.brand).forEach(u => {
-                        const d = new Date(u.formacion.dateCompleted || u.formacion.date);
-                        const m = d.getMonth(); if (m >= 0 && m < 12) mDots[m]++;
-                    });
-                    ds.push({ label: this.brand, data: mDots, backgroundColor: this.getColorForBrand(this.brand), borderRadius: 4 });
+                        ds.push({ label: this.brand, data: mDots, backgroundColor: this.getColorForBrand(this.brand), borderRadius: 4 });
+                    }
                 }
+
                 this.chartAnnual = new Chart(document.getElementById('chart-annual'), {
                     type: this.brand === 'all' ? 'line' : 'bar',
-                    data: { labels: months, datasets: ds },
+                    data: { labels: labelsLine, datasets: ds },
                     options: {
                         responsive: true, maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
@@ -800,7 +901,7 @@
                         },
                         scales: {
                             y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true },
-                            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45, minRotation: 45 } }
                         }
                     }
                 });
@@ -849,6 +950,16 @@
                 this.chartAnnual.update();
             },
 
+            getColorForString(str) {
+                if (!str) return '#64748b';
+                const s = str.trim().toLowerCase();
+                if (s === 'ialegre' || s === 'iñaki alegre' || (s.includes('iñaki') && s.includes('alegre'))) return 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #0f172a; text-shadow: none';
+                if (s === 'scristobal' || s === 'sergio cristobal' || (s.includes('sergio') && s.includes('cristobal'))) return 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: #ffffff; text-shadow: none';
+                const palette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#a855f7'];
+                let h = 0; for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+                return palette[Math.abs(h) % palette.length];
+            },
+
             getColorForBrand(brand) {
                 const palette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#a855f7'];
                 if (brand === 'Kia') return '#ef4444'; if (brand === 'Hyundai') return '#3b82f6'; if (brand === 'Kia Canarias') return '#f97316';
@@ -858,8 +969,81 @@
 
             renderIT() {
                 const list = this.getData().filter(u => u.reqConfig === true && !u.isArchived);
-                const search = document.getElementById('search-it').value.toLowerCase();
-                document.getElementById('it-body').innerHTML = list.filter(u => this.matchesSearch(u, search)).map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.tabletSN || u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3 text-center"><div class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-indigo-500/50 text-indigo-400 font-bold text-xs">${this.getDaysSince(u.fechaAlta)}</div></td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-2" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.archiveUserIT('${u.id}')" class="bg-amber-600/20 text-amber-500 px-2 py-1 rounded transition text-xs font-bold uppercase border border-amber-500/30 hover:bg-amber-600/30" title="Archivar"><span class="material-icons-round text-sm">inventory_2</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
+                const search = document.getElementById('search-it')?.value.toLowerCase() || '';
+                const statusFilter = document.getElementById('filter-it-status')?.value || 'all';
+                const startStr = document.getElementById('filter-it-start')?.value;
+                const endStr = document.getElementById('filter-it-end')?.value;
+                
+                const filtered = list.filter(u => {
+                    if (!this.matchesSearch(u, search, 'it')) return false;
+                    
+                    if (statusFilter === 'pending' && u.fechaConfig) return false;
+                    if (statusFilter === 'configured' && !u.fechaConfig) return false;
+                    
+                    if (startStr || endStr) {
+                        const dateObj = new Date(u.fechaConfig || u.fechaAlta);
+                        if (startStr && dateObj < new Date(startStr)) return false;
+                        if (endStr) {
+                            const endD = new Date(endStr);
+                            endD.setHours(23, 59, 59, 999);
+                            if (dateObj > endD) return false;
+                        }
+                    }
+                    return true;
+                });
+
+                document.getElementById('it-body').innerHTML = filtered.map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.tabletSN || u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3 text-center"><div class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-indigo-500/50 text-indigo-400 font-bold text-xs">${this.getDaysSince(u.fechaAlta)}</div></td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-xs text-slate-400 italic">${u.itComment || ''}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.editITComment('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-4" title="Comentar"><span class="material-icons-round text-sm">comment</span></button><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.archiveUserIT('${u.id}')" class="bg-amber-600/20 text-amber-500 px-2 py-1 rounded transition text-xs font-bold uppercase border border-amber-500/30 hover:bg-amber-600/30" title="Archivar"><span class="material-icons-round text-sm">inventory_2</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
+            },
+
+            exportITCSV() {
+                try {
+                    const list = this.getData().filter(u => u.reqConfig === true && !u.isArchived);
+                    const search = document.getElementById('search-it')?.value.toLowerCase() || '';
+                    const statusFilter = document.getElementById('filter-it-status')?.value || 'all';
+                    const startStr = document.getElementById('filter-it-start')?.value;
+                    const endStr = document.getElementById('filter-it-end')?.value;
+                    
+                    const data = list.filter(u => {
+                        if (!this.matchesSearch(u, search, 'it')) return false;
+                        if (statusFilter === 'pending' && u.fechaConfig) return false;
+                        if (statusFilter === 'configured' && !u.fechaConfig) return false;
+                        if (startStr || endStr) {
+                            const dateObj = new Date(u.fechaConfig || u.fechaAlta);
+                            if (startStr && dateObj < new Date(startStr)) return false;
+                            if (endStr) { const endD = new Date(endStr); endD.setHours(23, 59, 59, 999); if (dateObj > endD) return false; }
+                        }
+                        return true;
+                    });
+                    if (data.length === 0) return Swal.fire('Vacio', 'No hay registros con ese criterio.', 'info');
+
+                    let csv = "\uFEFFUsuario;Concesionario;Días Alta;S_N_Tablet;Estado;Comentario\n";
+                    data.forEach(u => {
+                        const obs = (u.itComment || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
+                        csv += `${u.nombre} ${u.apellidos};${u.concesionario};${this.getDaysSince(u.fechaAlta)};${u.tabletSN || u.serial || ''};${u.fechaConfig || 'Pendiente'};${obs}\n`;
+                    });
+                    const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); l.download = "Export_Config_iPad.csv"; l.click();
+                } catch (e) { Swal.fire('Error CSV', e.message, 'error'); }
+            },
+
+            async editITComment(id) {
+                const u = this.db.find(x => x.id == id);
+                if (!u) return;
+                const { value: text } = await Swal.fire({
+                    title: 'Comentarios IT',
+                    input: 'textarea',
+                    inputValue: u.itComment || '',
+                    inputPlaceholder: 'Escribe un comentario...',
+                    showCancelButton: true,
+                    background: '#1e293b',
+                    color: '#fff',
+                    confirmButtonText: 'Guardar',
+                    confirmButtonColor: '#6366f1'
+                });
+                if (text !== undefined) {
+                    u.itComment = text;
+                    await this.apiUpdate(u);
+                    this.renderIT();
+                }
             },
 
             async archiveUserIT(id) {
@@ -911,7 +1095,7 @@
             renderITArchived() {
                 const list = this.db.filter(u => u.isArchived === true);
                 const search = document.getElementById('search-it-archived').value.toLowerCase();
-                const filtered = list.filter(u => this.matchesSearch(u, search) || (u.motivoArchivado && u.motivoArchivado.toLowerCase().includes(search)));
+                const filtered = list.filter(u => this.matchesSearch(u, search, 'it') || (u.motivoArchivado && u.motivoArchivado.toLowerCase().includes(search)));
 
                 document.getElementById('it-archived-body').innerHTML = filtered.map(u => `
                     <tr>
@@ -962,6 +1146,13 @@
                     col.innerHTML = '';
 
                     const users = this.getData().filter(u => u.reqFormacion && u.formacion.status === s && this.matchesSearch(u, search));
+                    
+                    users.sort((a, b) => {
+                        const dateA = a.formacion.date || a.formacion.dateCompleted || '9999-12-31T23:59:59';
+                        const dateB = b.formacion.date || b.formacion.dateCompleted || '9999-12-31T23:59:59';
+                        return new Date(dateA) - new Date(dateB);
+                    });
+
                     const countEl = document.getElementById('count-' + idStr);
                     if (countEl) countEl.innerText = users.length;
 
@@ -976,6 +1167,8 @@
                         card.className = cardClass;
                         card.setAttribute('data-id', u.id);
 
+                        const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
+
                         if (isRealizada) {
                             card.innerHTML = `<div class="flex justify-between items-center"><h4 class="text-xs font-bold text-white truncate w-32 uppercase">${u.nombre} ${u.apellidos}</h4><span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">${this.formatDateEU(u.formacion.date)}</span></div>`;
                         } else if (isNoRealizada) {
@@ -987,7 +1180,7 @@
                                         <button onclick="app.editUser('${u.id}')" class="text-slate-500 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
                                         <button onclick="app.deleteUser('${u.id}')" class="text-slate-500 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
                                     </div>
-                                    <span class="text-[9px] text-red-500/70 font-bold">NO SHOW</span>
+                                    <span class="text-[9px] text-red-500/70 font-bold">No Presentado</span>
                                 </div>`;
                         } else {
                             card.innerHTML = `
@@ -996,12 +1189,14 @@
                                 <div class="flex items-center justify-between gap-1 mb-2">
                                     <div class="flex gap-1">
                                         <button onclick="app.editUser('${u.id}')" class="text-slate-400 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
-                                        <button onclick="app.sendITEmail('${u.id}')" class="text-slate-400 hover:text-indigo-400 transition"><span class="material-icons-round text-sm">mail</span></button>
+                                        <button onclick="event.stopPropagation(); app.sendEmail('${u.id}')" class="text-slate-400 hover:text-indigo-400 transition" title="Enviar Propuesta Formación"><span class="material-icons-round text-sm">mail</span></button>
                                         <button onclick="app.deleteUser('${u.id}')" class="text-slate-400 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
                                     </div>
-                                    <div class="w-7 h-7 rounded-full border border-indigo-500/40 flex items-center justify-center text-[10px] font-bold text-indigo-300 bg-indigo-500/5" title="Días desde el alta">${this.getDaysSince(u.fechaAlta)}</div>
-                                    <div class="text-[9px] font-mono text-slate-500">${this.formatDateTimeEU(u.formacion.date || u.formacion.dateCompleted)}</div>
-                                </div>`;
+                                    <div class="inline-flex items-center justify-center px-1.5 py-0.5 rounded border border-indigo-500/40 text-[9px] font-bold text-indigo-300 bg-indigo-500/10 shadow-sm" title="Días desde el alta">${this.getDaysSince(u.fechaAlta)}d</div>
+                                    <div class="text-[10px] font-semibold text-slate-300 antialiased tracking-tight">${this.formatDateTimeEU(u.formacion.date || u.formacion.dateCompleted)}</div>
+                                </div>
+                                ${ (s === 'Confirmada' || s === 'Convocada') ? `<div class="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg text-white uppercase tracking-tighter" style="background: ${this.getColorForString(assignee)}" title="Asignado por: ${assignee}">${this.getUserInitials(assignee)}</div>` : ''}
+                                `;
                         }
                         col.appendChild(card);
                     });
@@ -1012,10 +1207,56 @@
             async handleKanbanDrop(evt) {
                 const id = evt.item.getAttribute('data-id'); const newStatus = evt.to.getAttribute('data-status'); const u = app.db.find(x => x.id == id);
                 if (!u) return;
+
                 if (evt.from.id.includes('pendiente') && newStatus !== 'Pendiente') {
                     const { value: d } = await Swal.fire({ title: 'Programar Cita', input: 'datetime-local', background: '#1e293b', color: '#fff' });
                     if (d) u.formacion.date = d; else { app.renderKanban(); return; }
                 }
+
+                // NUEVA LÓGICA DE ASIGNACIÓN
+                if (newStatus === 'Confirmada' || newStatus === 'Convocada') {
+                    if (!u.formacion.confirmedBy) {
+                        if (this.user.role === 'admin') {
+                            const users = await this.apiGetUsers();
+                            const options = users.reduce((acc, curr) => {
+                                acc[curr.username] = curr.username;
+                                return acc;
+                            }, {});
+
+                            const { value: assignedUser } = await Swal.fire({
+                                title: '¿Quién asigna la formación?',
+                                input: 'select',
+                                inputOptions: options,
+                                inputPlaceholder: 'Seleccionar Usuario...',
+                                showCancelButton: true,
+                                background: '#1e293b',
+                                color: '#fff',
+                                confirmButtonColor: '#6366f1',
+                                customClass: {
+                                    input: 'bg-slate-800 text-white border-slate-700 text-sm rounded-lg p-2 focus:ring-indigo-500'
+                                }
+                            });
+
+                            if (assignedUser) {
+                                u.formacion.confirmedBy = assignedUser;
+                            } else {
+                                app.renderKanban();
+                                return;
+                            }
+                        } else {
+                            // Usuario normal, asignación automática
+                            u.formacion.confirmedBy = this.user.username;
+                        }
+                    }
+                } else if (newStatus === 'Pendiente') {
+                    // LIMPIEZA TOTAL AL VOLVER A PENDIENTE
+                    u.formacion.confirmedBy = null;
+                    u.formacion.date = "";
+                } else if (newStatus !== 'Realizada') {
+                    // Si sale de confirmado, limpiamos el campo
+                    u.formacion.confirmedBy = null;
+                }
+
                 if (newStatus === 'Realizada') u.formacion.dateCompleted = new Date().toISOString().split('T')[0];
                 u.formacion.status = newStatus; await app.apiUpdate(u); app.renderAll();
             },
@@ -1216,7 +1457,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
                         const fStatus = u.formacion?.status || 'Pendiente';
                         const fDate = u.formacion?.date || '';
-                        csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
+                        csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
                     });
                     const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); l.download = "Export_Completo.csv"; l.click();
                 } catch (e) { Swal.fire('Error CSV', e.message, 'error'); }
@@ -1259,7 +1500,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
                         const fStatus = u.formacion?.status || 'Pendiente';
                         const fDate = u.formacion?.date || '';
-                        csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
+                        csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
                     });
                     const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); l.download = `Export_${type}_${sStr}_${eStr}.csv`; l.click();
                 } catch (e) {
