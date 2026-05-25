@@ -9,9 +9,18 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="login.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 
 <body>
+<script>
+    // Restaurar tema antes de render (evita flash)
+    if (localStorage.getItem('app_theme') === 'light') document.body.classList.add('light-mode');
+</script>
+
+    <button class="theme-toggle-btn" onclick="toggleLoginTheme()" id="theme-toggle" title="Cambiar tema">
+        <span class="material-icons-round" id="theme-icon" style="font-size:18px">light_mode</span>
+    </button>
 
     <div class="glass-card w-full max-w-md p-8 rounded-2xl relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
@@ -73,13 +82,14 @@
                     sessionStorage.setItem('idealer_user', JSON.stringify(data.user));
                     setTimeout(() => window.location.href = '/', 500);
                 } else {
+                    const isLight = document.body.classList.contains('light-mode');
                     Swal.fire({
                         icon: 'error',
                         title: 'Acceso Denegado',
                         text: data.error,
-                        background: '#1e293b',
-                        color: '#fff',
-                        confirmButtonColor: '#304156'
+                        background: isLight ? 'rgba(255,255,255,0.94)' : '#1e293b',
+                        color: isLight ? '#1e293b' : '#fff',
+                        confirmButtonColor: '#4f46e5'
                     });
                     btn.innerHTML = 'Entrar';
                     btn.disabled = false;
@@ -90,6 +100,17 @@
                 btn.disabled = false;
             }
         });
+
+        function toggleLoginTheme() {
+            const isLight = document.body.classList.toggle('light-mode');
+            document.getElementById('theme-icon').textContent = isLight ? 'dark_mode' : 'light_mode';
+            localStorage.setItem('app_theme', isLight ? 'light' : 'dark');
+        }
+
+        // Sync icon with restored theme
+        if (document.body.classList.contains('light-mode')) {
+            document.getElementById('theme-icon').textContent = 'dark_mode';
+        }
     </script>
 </body>
 

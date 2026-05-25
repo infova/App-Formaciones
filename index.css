@@ -1,6 +1,10 @@
 body {
     font-family: 'Inter', sans-serif;
     background-color: #0f172a;
+    background-image: url('img/bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
     color: #e2e8f0;
     overflow: hidden;
     display: none;
@@ -23,8 +27,10 @@ body {
 
 /* Modal Styles */
 div:where(.swal2-container) div:where(.swal2-popup) {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: rgba(10, 18, 35, 0.88) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.09) !important;
     padding: 25px;
     width: 600px !important;
 }
@@ -123,16 +129,19 @@ input[type="datetime-local"] {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background: rgba(30, 41, 59, 0.3);
+    background: rgba(10, 18, 35, 0.5);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     border-radius: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     max-height: 100%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .kanban-header {
     padding: 0.75rem;
-    background: #1e293b;
-    border-bottom: 1px solid #334155;
+    background: rgba(10, 18, 35, 0.65);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 0.75rem 0.75rem 0 0;
     font-weight: 700;
     text-align: center;
@@ -157,7 +166,9 @@ input[type="datetime-local"] {
     transition: transform 0.1s;
     border-left-width: 4px;
     cursor: grab;
-    background: #1e293b;
+    background: rgba(20, 30, 50, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     position: relative;
     user-select: none;
 }
@@ -169,14 +180,25 @@ input[type="datetime-local"] {
 }
 
 .btn-active {
-    background: white;
-    color: #0f172a;
+    background: #4338ca;
+    color: #fff;
     font-weight: bold;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5), 0 0 12px rgba(99,102,241,0.4);
+    transform: translateY(2px);
 }
 
 .btn-inactive {
-    color: #94a3b8;
+    color: #cbd5e1;
+    background: #2d3f55;
+    box-shadow: 0 4px 0 #111d2c, 0 1px 3px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+}
+
+.btn-inactive:hover {
+    background: #374f68;
+    color: #f1f5f9;
+    box-shadow: 0 5px 0 #111d2c, 0 2px 6px rgba(0,0,0,0.35);
+    transform: translateY(-2px);
 }
 
 .action-btn {
@@ -194,6 +216,17 @@ input[type="datetime-local"] {
 }
 
 /* ── REGION DROPDOWN MENU ─────────────────────────────────────── */
+#brand-filters {
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.09);
+    box-shadow:
+        0 10px 36px rgba(0,0,0,0.45),
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -1px 0 rgba(0,0,0,0.25);
+}
+
 .region-group {
     position: relative;
     display: inline-flex;
@@ -209,7 +242,7 @@ input[type="datetime-local"] {
     text-transform: uppercase;
     border-radius: 6px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, box-shadow 0.1s, transform 0.1s;
     white-space: nowrap;
     letter-spacing: 0.04em;
     border: none;
@@ -222,7 +255,7 @@ input[type="datetime-local"] {
     transition: transform 0.2s;
 }
 
-.region-group:hover .region-arrow {
+.region-group.is-open .region-arrow {
     transform: rotate(180deg);
 }
 
@@ -244,8 +277,7 @@ input[type="datetime-local"] {
     transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-.region-group:hover .region-dropdown,
-.region-group:focus-within .region-dropdown {
+.region-group.is-open .region-dropdown {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
@@ -315,4 +347,231 @@ input[type="datetime-local"] {
 .region-btn.region-inactive:hover {
     background: #334155;
     color: #e2e8f0;
+}
+
+/* Botón en relieve: estado sin filtro activo */
+.region-btn.region-filter-off {
+    background: #2d3f55;
+    color: #cbd5e1;
+    box-shadow: 0 4px 0 #111d2c, 0 1px 3px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+}
+
+.region-btn.region-filter-off:hover {
+    background: #374f68;
+    color: #f1f5f9;
+    box-shadow: 0 5px 0 #111d2c, 0 2px 6px rgba(0,0,0,0.35);
+    transform: translateY(-2px);
+}
+
+.region-btn.region-filter-off:active {
+    box-shadow: 0 1px 0 #111d2c;
+    transform: translateY(2px);
+}
+
+/* Botón hundido: filtro de región activo */
+.region-btn.region-filter-on {
+    background: #4338ca;
+    color: #fff;
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5), 0 0 12px rgba(99,102,241,0.4);
+    transform: translateY(2px);
+}
+
+.region-btn.region-filter-on:hover {
+    background: #4f46e5;
+}
+
+/* Ícono de gráfica en el botón */
+.region-chart-icon {
+    font-size: 13px !important;
+    opacity: 0.55;
+    vertical-align: middle;
+}
+
+.region-btn.region-filter-on .region-chart-icon {
+    opacity: 1;
+}
+
+/* ── GLASSMORPHISM — PANELES DE CONTENIDO ────────────────────── */
+div.bg-sidebar {
+    background: rgba(10, 18, 35, 0.58) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow:
+        0 10px 32px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+}
+/* El área principal y el sidebar son transparentes para ver el fondo */
+main.bg-darkbg {
+    background: transparent !important;
+}
+
+aside.bg-sidebar {
+    background: rgba(10, 18, 35, 0.72) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+/* ── GLASS PANEL (Header) ─────────────────────────────────────── */
+.glass-panel {
+    background: rgba(10, 18, 35, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODO CLARO
+   ═══════════════════════════════════════════════════════════════ */
+body.light-mode {
+    background-image: url('img/bgcl.png');
+    color: #1e293b;
+}
+
+/* Paneles principales */
+body.light-mode .glass-panel {
+    background: rgba(255,255,255,0.62) !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    border-color: rgba(0,0,0,0.07) !important;
+}
+body.light-mode aside.bg-sidebar {
+    background: rgba(255,255,255,0.68) !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    border-color: rgba(0,0,0,0.07) !important;
+}
+body.light-mode div.bg-sidebar {
+    background: rgba(255,255,255,0.52) !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9) !important;
+}
+body.light-mode main.bg-darkbg {
+    background: transparent !important;
+}
+body.light-mode #brand-filters {
+    background: rgba(255,255,255,0.58) !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    border-color: rgba(0,0,0,0.07) !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.85) !important;
+}
+
+/* Textos */
+body.light-mode .text-white { color: #0f172a !important; }
+body.light-mode .text-slate-400 { color: #64748b !important; }
+body.light-mode .text-slate-500 { color: #64748b !important; }
+body.light-mode .text-slate-300 { color: #475569 !important; }
+body.light-mode .text-slate-200 { color: #334155 !important; }
+body.light-mode aside { color: #334155; }
+
+/* Bordes */
+body.light-mode .border-slate-700 { border-color: rgba(0,0,0,0.09) !important; }
+
+/* Fondos de elementos secundarios */
+body.light-mode .bg-slate-800 { background: rgba(241,245,249,0.92) !important; color: #334155 !important; }
+body.light-mode .bg-slate-900 { background: rgba(248,250,252,0.96) !important; color: #1e293b !important; }
+body.light-mode .bg-slate-700 { background: rgba(226,232,240,0.9) !important; }
+
+/* Inputs y campos de formulario */
+body.light-mode input,
+body.light-mode select,
+body.light-mode textarea {
+    background: rgba(248,250,252,0.92) !important;
+    color: #1e293b !important;
+    border-color: #cbd5e1 !important;
+}
+body.light-mode .custom-field { background: rgba(248,250,252,0.92) !important; color: #1e293b !important; border-color: #cbd5e1 !important; }
+body.light-mode .field-label { color: #64748b !important; }
+body.light-mode .dash-date { background: rgba(241,245,249,0.9) !important; color: #1e293b !important; border-color: #cbd5e1 !important; }
+
+/* Botones raised (modo claro) */
+body.light-mode .btn-inactive {
+    background: rgba(241,245,249,0.95) !important;
+    color: #475569 !important;
+    box-shadow: 0 4px 0 #b8c5d0, 0 1px 2px rgba(0,0,0,0.1) !important;
+}
+body.light-mode .btn-inactive:hover {
+    background: white !important;
+    color: #1e293b !important;
+    box-shadow: 0 5px 0 #b8c5d0, 0 2px 5px rgba(0,0,0,0.12) !important;
+}
+
+/* Botones de región (modo claro) */
+body.light-mode .region-btn.region-filter-off {
+    background: rgba(241,245,249,0.95) !important;
+    color: #475569 !important;
+    box-shadow: 0 4px 0 #b8c5d0, 0 1px 2px rgba(0,0,0,0.1) !important;
+}
+body.light-mode .region-btn.region-filter-off:hover {
+    background: white !important;
+    color: #1e293b !important;
+    box-shadow: 0 5px 0 #b8c5d0, 0 2px 5px rgba(0,0,0,0.12) !important;
+}
+
+/* Dropdown (modo claro) */
+body.light-mode .region-dropdown {
+    background: rgba(255,255,255,0.97);
+    border-color: rgba(0,0,0,0.08);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+body.light-mode .region-dropdown-item { color: #475569; }
+body.light-mode .region-dropdown-item:hover { background: #f1f5f9; color: #1e293b; }
+
+/* Kanban (modo claro) */
+body.light-mode .kanban-column {
+    background: rgba(255,255,255,0.42) !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.7) !important;
+}
+body.light-mode .kanban-header {
+    background: rgba(255,255,255,0.65) !important;
+    border-color: rgba(0,0,0,0.07) !important;
+    color: #1e293b !important;
+}
+body.light-mode .kanban-card {
+    background: rgba(255,255,255,0.72) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    border-color: rgba(0,0,0,0.05) !important;
+    color: #334155 !important;
+}
+
+/* SweetAlert2 (modo claro) */
+body.light-mode div:where(.swal2-container) div:where(.swal2-popup) {
+    background: rgba(255,255,255,0.94) !important;
+    border-color: rgba(0,0,0,0.09) !important;
+}
+body.light-mode .swal2-title { color: #1e293b !important; }
+body.light-mode .swal2-html-container { color: #334155 !important; }
+
+/* Scrollbar (modo claro) */
+body.light-mode ::-webkit-scrollbar-track { background: rgba(248,250,252,0.5); }
+body.light-mode ::-webkit-scrollbar-thumb { background: #94a3b8; }
+body.light-mode ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* ── TARJETAS AGENDA ──────────────────────────────────────────── */
+.agenda-item {
+    background: rgba(20, 30, 55, 0.65);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-left: 3px solid #4f46e5;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.15s, border-color 0.15s;
+}
+.agenda-item:hover {
+    background: rgba(30, 42, 72, 0.8);
+    border-color: rgba(99, 102, 241, 0.4);
+    border-left-color: #6366f1;
+}
+body.light-mode .agenda-item {
+    background: rgba(238, 242, 255, 0.8) !important;
+    border: 1px solid rgba(99, 102, 241, 0.18) !important;
+    border-left: 3px solid #6366f1 !important;
+}
+body.light-mode .agenda-item:hover {
+    background: rgba(224, 231, 255, 0.9) !important;
+    border-left-color: #4f46e5 !important;
 }

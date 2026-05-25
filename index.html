@@ -141,9 +141,14 @@
             class="h-16 glass-panel flex items-center justify-between px-6 sticky top-0 z-30 flex-shrink-0 border-b border-slate-700/50">
             <div class="flex items-center gap-4">
                 <h2 id="page-title" class="text-xl font-bold text-white whitespace-nowrap">Dashboard</h2>
-                <div class="flex bg-slate-800 rounded-lg p-1 border border-slate-700" id="brand-filters"></div>
+                <div class="flex gap-1.5 rounded-xl p-2.5" id="brand-filters"></div>
             </div>
             <div class="flex items-center gap-3">
+                <button onclick="app.toggleTheme()" id="theme-toggle"
+                    class="flex items-center justify-center w-8 h-8 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300 transition"
+                    title="Cambiar tema">
+                    <span class="material-icons-round text-sm" id="theme-icon">light_mode</span>
+                </button>
                 <button onclick="app.showProfile()"
                     class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs font-bold transition">
                     <span class="material-icons-round text-sm text-indigo-400">account_circle</span> <span
@@ -488,6 +493,8 @@
             db: [],
             year: '2026',
             brand: 'all',
+            regionFilter: null,
+            openDropdown: null,
             user: null,
             chartDist: null,
             chartBrands: null,
@@ -503,6 +510,13 @@
                 const u = sessionStorage.getItem('idealer_user');
                 if (!u) { window.location.href = 'login.html'; return; }
                 this.user = JSON.parse(u);
+
+                // Restaurar tema guardado
+                if (localStorage.getItem('app_theme') === 'light') {
+                    document.body.classList.add('light-mode');
+                    const icon = document.getElementById('theme-icon');
+                    if (icon) icon.textContent = 'dark_mode';
+                }
 
                 // Update Header User
                 const headerUser = document.getElementById('header-user');
@@ -538,6 +552,13 @@
 
                 this.nav('dashboard');
                 this.renderFilters();
+                // Cerrar dropdowns al hacer click fuera
+                document.addEventListener('click', (e) => {
+                    if (app.openDropdown !== null && !e.target.closest('.region-group')) {
+                        app.openDropdown = null;
+                        app.renderFilters();
+                    }
+                });
                 this.initKanban();
             },
 
@@ -773,7 +794,7 @@ const start = new Date(dateStr);
 
                 // Build HTML
                 // "Todos" button
-                let html = `<button onclick="app.setFilter('all')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase ${this.brand === 'all' ? 'btn-active' : 'btn-inactive'}">Todos</button>`;
+                let html = `<button onclick="app.setFilter('all')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase ${this.brand === 'all' && !this.regionFilter ? 'btn-active' : 'btn-inactive'}">Todos</button>`;
 
                 // Region buttons with dropdowns
                 regionOrder.forEach(region => {
@@ -781,8 +802,11 @@ const start = new Date(dateStr);
                     if (brands.length === 0) return;
 
                     const regionIsActive = activeBrandRegion === region;
-                    const regionLabel = region === 'España' ? '🇪🇸 España' : '🌎 Latam';
-                    const regionBtnClass = regionIsActive ? 'region-active' : 'region-inactive';
+                    const regionLabel = region === 'España'
+                        ? `<svg style="display:inline-block;width:16px;height:11px;border-radius:2px;vertical-align:middle;margin-right:3px;flex-shrink:0" viewBox="0 0 16 11"><rect width="16" height="11" fill="#c60b1e"/><rect y="2.75" width="16" height="5.5" fill="#ffc400"/></svg> España`
+                        : '🌎 Latam';
+                    const isRegionFilterOn = this.regionFilter === region;
+                    const regionBtnClass = regionIsActive ? 'region-active' : (isRegionFilterOn ? 'region-filter-on' : 'region-filter-off region-inactive');
                     const brandChip = regionIsActive ? `<span class="selected-brand-chip" style="background:${getBrandColor(this.brand)}">${this.brand}</span>` : '';
 
                     const dropdownItems = brands.map(b => {
@@ -794,8 +818,9 @@ const start = new Date(dateStr);
                     }).join('');
 
                     html += `
-                        <div class="region-group">
-                            <button class="region-btn ${regionBtnClass}">
+                        <div class="region-group ${this.openDropdown === region ? 'is-open' : ''}">
+                            <button onclick="app.toggleDropdown(event, '${region}')" class="region-btn ${regionBtnClass}" title="${isRegionFilterOn ? 'Desactivar filtro de región' : 'Ver solo gráfica de ' + region}">
+                                <span class="material-icons-round region-chart-icon">show_chart</span>
                                 ${regionLabel}${brandChip}
                                 <span class="region-arrow">▼</span>
                             </button>
@@ -831,7 +856,22 @@ const start = new Date(dateStr);
                 if (view === 'kanban') this.initKanban();
             },
 
-            setFilter(brand) { this.brand = brand; this.renderFilters(); this.renderAll(); },
+            setFilter(brand) { this.brand = brand; this.regionFilter = null; this.openDropdown = null; this.renderFilters(); this.renderAll(); },
+            toggleTheme() {
+                const isLight = document.body.classList.toggle('light-mode');
+                const icon = document.getElementById('theme-icon');
+                if (icon) icon.textContent = isLight ? 'dark_mode' : 'light_mode';
+                localStorage.setItem('app_theme', isLight ? 'light' : 'dark');
+            },
+            toggleDropdown(event, region) {
+                event.stopPropagation();
+                const isOpen = this.openDropdown === region;
+                this.openDropdown = isOpen ? null : region;
+                this.regionFilter = isOpen ? null : region;
+                if (!isOpen) this.brand = 'all';
+                this.renderFilters();
+                this.renderAll();
+            },
             getData() {
                 return this.db.filter(u => {
                     // Filter allowed brands for Latam users
@@ -970,16 +1010,21 @@ const start = new Date(dateStr);
                     }
                 });
 
+                // Filtrar marcas por región si hay filtro activo
+                const brandsForChart = (this.brand === 'all' && this.regionFilter && this.clientRecords)
+                    ? this.clientRecords.filter(c => c.region === this.regionFilter).map(c => c.name).filter(n => this.clients.includes(n))
+                    : this.clients;
+
                 if (this.chartBrands) this.chartBrands.destroy();
                 this.chartBrands = new Chart(document.getElementById('chart-brands'), {
-                    type: 'bar', data: { labels: this.clients, datasets: [{ label: 'Pendientes', data: this.clients.map(c => data.filter(u => u.marca === c && u.reqFormacion && u.formacion.status !== 'Realizada').length), backgroundColor: '#6366f1', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true }, x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } } }
+                    type: 'bar', data: { labels: brandsForChart, datasets: [{ label: 'Pendientes', data: brandsForChart.map(c => data.filter(u => u.marca === c && u.reqFormacion && u.formacion.status !== 'Realizada').length), backgroundColor: '#6366f1', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true }, x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } } }
                 });
 
                 const sch = data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date));
                 document.getElementById('list-agenda').innerHTML = sch.map(u => {
                     const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
                     return `
-                    <div class="flex items-center gap-2 p-1.5 bg-slate-800/50 rounded border border-slate-700 text-[10px] relative group">
+                    <div class="flex items-center gap-2 p-1.5 agenda-item rounded text-[10px] relative group">
                         <div class="bg-indigo-600 text-white px-2 py-1 rounded font-bold text-center leading-none">
                             ${new Date(u.formacion.date).getDate()}<br>
                             <small>${new Date(u.formacion.date).toLocaleString('es', { month: 'short' }).toUpperCase()}</small>
@@ -1031,7 +1076,7 @@ const start = new Date(dateStr);
 
                         // Poblar datos
                         if (this.brand === 'all') {
-                            this.clients.forEach(c => {
+                            brandsForChart.forEach(c => {
                                 const mDots = Array(labelsLine.length).fill(0);
                                 allCompleted.filter(u => u.marca === c).forEach(u => {
                                     const d = new Date(u.formacion.dateCompleted || u.formacion.date);
@@ -1064,7 +1109,7 @@ const start = new Date(dateStr);
                     const yearData = this.db.filter(u => u.year == this.year && u.formacion.status === 'Realizada');
                     
                     if (this.brand === 'all') {
-                        this.clients.forEach(c => {
+                        brandsForChart.forEach(c => {
                             const mDots = Array(12).fill(0);
                             yearData.filter(u => u.marca === c).forEach(u => {
                                 const d = new Date(u.formacion.dateCompleted || u.formacion.date);
@@ -1461,7 +1506,12 @@ const start = new Date(dateStr);
                         const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
 
                         if (isRealizada) {
-                            card.innerHTML = `<div class="flex justify-between items-center"><h4 class="text-xs font-bold text-white truncate w-32 uppercase">${u.nombre} ${u.apellidos}</h4><span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">${this.formatDateEU(u.formacion.date)}</span></div>`;
+                            card.innerHTML = `
+                                <div class="flex justify-between items-center mb-0.5">
+                                    <h4 class="text-xs font-bold text-white truncate uppercase" style="max-width:65%">${u.nombre} ${u.apellidos}</h4>
+                                    <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded flex-shrink-0">${this.formatDateEU(u.formacion.date)}</span>
+                                </div>
+                                <div class="text-[9px] text-slate-500 uppercase truncate">${u.concesionario || '—'}</div>`;
                         } else if (isNoRealizada) {
                             card.innerHTML = `
                                 <div class="text-xs font-bold text-slate-300 uppercase truncate mb-1 line-through decoration-slate-500">${u.nombre} ${u.apellidos}</div>
@@ -2561,7 +2611,19 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
             },
 
             async deleteClient(id) {
-                if (confirm('¿Eliminar esta marca?')) {
+                const result = await Swal.fire({
+                    title: '¿Eliminar esta marca?',
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#475569',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                    background: '#1e293b',
+                    color: '#fff'
+                });
+                if (result.isConfirmed) {
                     try {
                         await this.apiDeleteClient(id);
                         await this.fetchClients();
@@ -2661,7 +2723,22 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
 
             createModal() { this.openUserModal(); },
             editUser(id) { this.openUserModal(id); },
-            deleteUser(id) { if (confirm("¿Eliminar comercial?")) { this.db = this.db.filter(u => u.id != id); this.apiDelete(id); this.renderAll(); } },
+            async deleteUser(id) {
+                const u = this.db.find(x => x.id == id);
+                const result = await Swal.fire({
+                    title: '¿Eliminar comercial?',
+                    html: u ? `<span class="text-slate-300">${u.nombre} ${u.apellidos}</span><br><span class="text-xs text-slate-500 uppercase">${u.concesionario || ''}</span>` : '¿Eliminar este registro?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#475569',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                    background: '#1e293b',
+                    color: '#fff'
+                });
+                if (result.isConfirmed) { this.db = this.db.filter(u => u.id != id); this.apiDelete(id); this.renderAll(); }
+            },
 
             generateReport() {
                 try {
