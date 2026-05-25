@@ -51,6 +51,7 @@ username VARCHAR(255) UNIQUE NOT NULL,
 password VARCHAR(255) NOT NULL,
 role VARCHAR(50) DEFAULT 'user',
 brands VARCHAR(255) DEFAULT 'All',
+region VARCHAR(50) DEFAULT 'España',
 lastLogin DATETIME
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
@@ -71,24 +72,42 @@ data TEXT
     // Clientes
     $pdo->exec("CREATE TABLE IF NOT EXISTS clients (
 id INT AUTO_INCREMENT PRIMARY KEY,
-name VARCHAR(255) UNIQUE NOT NULL
+name VARCHAR(255) UNIQUE NOT NULL,
+region VARCHAR(50) DEFAULT 'España'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Alterar tablas para agregar columnas de región si ya existen
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN region VARCHAR(50) DEFAULT 'España'");
+    } catch (PDOException $e) {
+        // Ignorar si la columna ya existe
+    }
+
+    try {
+        $pdo->exec("ALTER TABLE clients ADD COLUMN region VARCHAR(50) DEFAULT 'España'");
+    } catch (PDOException $e) {
+        // Ignorar si la columna ya existe
+    }
 
     // Usuario admin por defecto
     $stmt = $pdo->query("SELECT COUNT(*) FROM users");
     if ($stmt->fetchColumn() == 0) {
         $hash = password_hash('admin123', PASSWORD_BCRYPT);
-        $stmt = $pdo->prepare("INSERT INTO users (username, password, role, brands) VALUES (?, ?, ?, ?)");
-        $stmt->execute(['admin', $hash, 'admin', 'All']);
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, role, brands, region) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute(['admin', $hash, 'admin', 'All', 'España']);
     }
 
     // Clientes por defecto
     $stmt = $pdo->query("SELECT COUNT(*) FROM clients");
     if ($stmt->fetchColumn() == 0) {
-        $defaultClients = ['Kia', 'Hyundai', 'Kia Canarias'];
+        $defaultClients = [
+            ['name' => 'Kia', 'region' => 'España'],
+            ['name' => 'Hyundai', 'region' => 'España'],
+            ['name' => 'Kia Canarias', 'region' => 'España']
+        ];
         foreach ($defaultClients as $client) {
-            $stmt = $pdo->prepare("INSERT INTO clients (name) VALUES (?)");
-            $stmt->execute([$client]);
+            $stmt = $pdo->prepare("INSERT INTO clients (name, region) VALUES (?, ?)");
+            $stmt->execute([$client['name'], $client['region']]);
         }
     }
 

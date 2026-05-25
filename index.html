@@ -307,13 +307,22 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Contenedor de Acciones Masivas -->
+                    <div id="it-bulk-actions" class="hidden mb-4 p-3 bg-slate-800 rounded-lg border border-indigo-500/20 flex gap-2 items-center">
+                        <span class="text-xs text-slate-400 font-bold uppercase mr-4" id="it-bulk-count">0 seleccionados</span>
+                        <button onclick="app.setConfigBulkSelected()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded transition">Actualizar y Archivar Seleccionados</button>
+                        <button onclick="app.archiveITBulkSelected()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded transition">Archivar Seleccionados</button>
+                    </div>
+
                     <table class="w-full text-sm text-slate-300">
                         <thead class="text-xs uppercase bg-slate-800 text-slate-500">
                             <tr>
-                                <th class="p-3 text-left">Usuario</th>
-                                <th class="p-3 text-left">Concesionario</th>
-                                <th class="p-3 text-center">Días Alta</th>
-                                <th class="p-3 text-left">Estado IT</th>
+                                <th class="p-3 text-left w-10"><input type="checkbox" id="it-select-all" onclick="app.toggleSelectAllIT(this)"></th>
+                                <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('it', 'nombre')">Usuario <span id="sort-icon-it-nombre">↕</span></th>
+                                <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('it', 'concesionario')">Concesionario <span id="sort-icon-it-concesionario">↕</span></th>
+                                <th class="p-3 text-center cursor-pointer select-none" onclick="app.handleHeaderSort('it', 'fechaAlta')">Días Alta <span id="sort-icon-it-fechaAlta">↕</span></th>
+                                <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('it', 'fechaConfig')">Estado IT <span id="sort-icon-it-fechaConfig">↕</span></th>
                                 <th class="p-3 text-left">Comentarios</th>
                                 <th class="p-3 text-right">Acción</th>
                             </tr>
@@ -340,9 +349,9 @@
                     <table class="w-full text-sm text-slate-300">
                         <thead class="text-xs uppercase bg-slate-800 text-slate-500">
                             <tr>
-                                <th class="p-3 text-left">Usuario</th>
-                                <th class="p-3 text-left">Nº Serie</th>
-                                <th class="p-3 text-left">Motivo de Archivado</th>
+                                <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('itArchived', 'nombre')">Usuario <span id="sort-icon-itArchived-nombre">↕</span></th>
+                                <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('itArchived', 'tabletSN')">Nº Serie <span id="sort-icon-itArchived-tabletSN">↕</span></th>
+                                <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('itArchived', 'fechaArchivado')">Motivo de Archivado / Fecha <span id="sort-icon-itArchived-fechaArchivado">↕</span></th>
                                 <th class="p-3 text-right">Acción</th>
                             </tr>
                         </thead>
@@ -456,11 +465,11 @@
                         <table class="w-full text-sm text-slate-300">
                             <thead class="text-xs uppercase bg-slate-800 text-slate-500 sticky top-0 z-10">
                                 <tr>
-                                    <th class="p-3 text-left">ID</th>
-                                    <th class="p-3 text-left">Nombre Completo</th>
-                                    <th class="p-3 text-left">Marca</th>
-                                    <th class="p-3 text-left">Concesionario</th>
-                                    <th class="p-3 text-left">Tipo</th>
+                                    <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('informes', 'id')">ID <span id="sort-icon-informes-id">↕</span></th>
+                                    <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('informes', 'nombre')">Nombre Completo <span id="sort-icon-informes-nombre">↕</span></th>
+                                    <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('informes', 'marca')">Marca <span id="sort-icon-informes-marca">↕</span></th>
+                                    <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('informes', 'concesionario')">Concesionario <span id="sort-icon-informes-concesionario">↕</span></th>
+                                    <th class="p-3 text-left cursor-pointer select-none" onclick="app.handleHeaderSort('informes', 'tipoAcceso')">Tipo <span id="sort-icon-informes-tipoAcceso">↕</span></th>
                                     <th class="p-3 text-left">Formación</th>
                                     <th class="p-3 text-left">IT Config</th>
                                     <th class="p-3 text-right">Acciones</th>
@@ -484,6 +493,11 @@
             chartBrands: null,
             chartAnnual: null,
             clients: [], // Will fetch from API
+            sort: {
+                it: { column: 'fechaAlta', direction: 'desc' }, // default: newest first
+                itArchived: { column: 'fechaArchivado', direction: 'desc' }, // default: newest first
+                informes: { column: 'fechaAlta', direction: 'desc' } // default: newest first
+            },
 
             async init() {
                 const u = sessionStorage.getItem('idealer_user');
@@ -493,6 +507,16 @@
                 // Update Header User
                 const headerUser = document.getElementById('header-user');
                 if (headerUser) headerUser.innerText = this.user.username;
+
+                // Hide iPad Config for Latam users
+                const navIt = document.getElementById('nav-it');
+                if (navIt) {
+                    if (this.user.region === 'Latam') {
+                        navIt.classList.add('hidden');
+                    } else {
+                        navIt.classList.remove('hidden');
+                    }
+                }
 
                 this.year = document.getElementById('global-year').value;
                 const d = new Date();
@@ -522,12 +546,15 @@
                     const res = await fetch('api/clients.php');
                     if (res.ok) {
                         const data = await res.json();
-                        this.clients = data.map(c => c.name);
-                        this.clientRecords = data; // Store full objects too if needed
+                        this.clientRecords = data;
+                        this.clients = data
+                            .filter(c => !this.user || this.user.region === 'España' || c.region === 'Latam')
+                            .map(c => c.name);
                     }
                 } catch (e) {
                     console.error("Error fetching clients", e);
                     this.clients = ['Kia', 'Hyundai', 'Kia Canarias']; // Fallback
+                    this.clientRecords = this.clients.map((name, index) => ({ id: index + 1, name, region: 'España' }));
                 }
             },
 
@@ -560,7 +587,7 @@
             getTimeFromDate(iso) { if (!iso || !iso.includes('T')) return '--:--'; return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); },
             getDaysSince(dateStr) {
                 if (!dateStr) return 0;
-                const start = new Date(dateStr);
+const start = new Date(dateStr);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 start.setHours(0, 0, 0, 0);
@@ -575,21 +602,222 @@
                 return clean.substring(0, 2);
             },
 
-            renderFilters() {
-                const container = document.getElementById('brand-filters');
-                let html = `<button onclick="app.setFilter('all')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase ${this.brand === 'all' ? 'btn-active' : 'btn-inactive'}">Todos</button>`;
-                this.clients.forEach(c => {
-                    html += `<button onclick="app.setFilter('${c}')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase whitespace-nowrap ${this.brand === c ? 'btn-active' : 'btn-inactive'}">${c}</button>`;
+            sortList(list, sortConfig) {
+                const { column, direction } = sortConfig;
+                return list.sort((a, b) => {
+                    let valA, valB;
+                    if (column === 'nombre') {
+                        valA = `${a.nombre || ''} ${a.apellidos || ''}`.toLowerCase();
+                        valB = `${b.nombre || ''} ${b.apellidos || ''}`.toLowerCase();
+                    } else if (column === 'fechaConfig') {
+                        valA = a.fechaConfig ? '1_' + a.fechaConfig : '0_pendiente';
+                        valB = b.fechaConfig ? '1_' + b.fechaConfig : '0_pendiente';
+                    } else {
+                        valA = (a[column] || '').toString().toLowerCase();
+                        valB = (b[column] || '').toString().toLowerCase();
+                    }
+
+                    if (valA < valB) return direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            },
+
+            handleHeaderSort(tableKey, column) {
+                const current = this.sort[tableKey];
+                if (current.column === column) {
+                    current.direction = current.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sort[tableKey] = { column, direction: 'asc' };
+                }
+                this.renderAll();
+            },
+
+            getSortIcon(tableKey, column) {
+                const current = this.sort[tableKey];
+                if (current.column !== column) return '<span class="text-slate-600 text-xs">↕</span>';
+                return current.direction === 'asc' ? '<span class="text-indigo-400 text-xs">▲</span>' : '<span class="text-indigo-400 text-xs">▼</span>';
+            },
+
+            toggleSelectAllIT(master) {
+                document.querySelectorAll('.it-row-checkbox').forEach(cb => {
+                    cb.checked = master.checked;
+                });
+                this.updateBulkActionVisibility();
+            },
+
+            updateBulkActionVisibility() {
+                const selected = document.querySelectorAll('.it-row-checkbox:checked');
+                const bulkActions = document.getElementById('it-bulk-actions');
+                const bulkCount = document.getElementById('it-bulk-count');
+                if (bulkActions && bulkCount) {
+                    if (selected.length > 0) {
+                        bulkActions.classList.remove('hidden');
+                        bulkCount.innerText = `${selected.length} seleccionados`;
+                    } else {
+                        bulkActions.classList.add('hidden');
+                        bulkCount.innerText = `0 seleccionados`;
+                    }
+                }
+            },
+
+            getSelectedITIds() {
+                const ids = [];
+                document.querySelectorAll('.it-row-checkbox:checked').forEach(cb => {
+                    ids.push(cb.value);
+                });
+                return ids;
+            },
+
+            async setConfigBulkSelected() {
+                const ids = this.getSelectedITIds();
+                if (ids.length === 0) return;
+                const { value: d } = await Swal.fire({
+                    title: 'Fecha Intervención IT Masiva',
+                    input: 'date',
+                    background: '#1e293b',
+                    color: '#fff',
+                    confirmButtonColor: '#6366f1',
+                    inputValue: new Date().toISOString().split('T')[0]
+                });
+                if (d) {
+                    Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    try {
+                        for (const id of ids) {
+                            const u = this.db.find(x => x.id == id);
+                            if (u) {
+                                u.fechaConfig = d;
+                                u.isArchived = true;
+                                u.fechaArchivado = d;
+                                u.motivoArchivado = "iPad Configurado";
+                                u.itComment = "iPad Configurado";
+                                await this.apiUpdate(u);
+                            }
+                        }
+                        await this.fetchData();
+                        this.renderAll();
+                        Swal.fire({ icon: 'success', title: 'Ipad(s) configurados y archivados correctamente', background: '#1e293b', color: '#fff' });
+                    } catch (e) {
+                        Swal.fire('Error', e.message, 'error');
+                    }
+                }
+            },
+
+            async archiveITBulkSelected() {
+                const ids = this.getSelectedITIds();
+                if (ids.length === 0) return;
+                const { value: form } = await Swal.fire({
+                    title: 'Archivar Configuraciones IT Seleccionadas',
+                    html: `<div class="text-left text-xs text-slate-400 mb-2">Indica el motivo por el cual archivas a estos comerciales:</div>
+                           <input id="sw-arch-date" type="date" class="swal2-input text-sm" value="${new Date().toISOString().split('T')[0]}">
+                           <textarea id="sw-arch-motive" class="swal2-textarea text-sm" placeholder="Motivo del archivado..."></textarea>`,
+                    background: '#1e293b', color: '#fff',
+                    showCancelButton: true, confirmButtonColor: '#d97706',
+                    preConfirm: () => {
+                        return {
+                            date: document.getElementById('sw-arch-date').value,
+                            motive: document.getElementById('sw-arch-motive').value
+                        }
+                    }
                 });
 
-                // Only show '+' button for admins
+                if (form) {
+                    Swal.fire({ title: 'Archivando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    try {
+                        for (const id of ids) {
+                            const u = this.db.find(x => x.id == id);
+                            if (u) {
+                                u.isArchived = true;
+                                u.fechaArchivado = form.date;
+                                u.motivoArchivado = form.motive;
+                                await this.apiUpdate(u);
+                            }
+                        }
+                        await this.fetchData();
+                        this.renderAll();
+                        Swal.fire({ icon: 'success', title: 'Comerciales archivados correctamente', background: '#1e293b', color: '#fff' });
+                    } catch (e) {
+                        Swal.fire('Error', e.message, 'error');
+                    }
+                }
+            },
+
+            renderFilters() {
+                const container = document.getElementById('brand-filters');
+
+                // Group clientRecords by region
+                const records = this.clientRecords || this.clients.map(n => ({ name: n, region: 'España' }));
+
+                // Determine which regions are visible for this user
+                const isLatam = this.user && this.user.region === 'Latam';
+                const regionOrder = isLatam ? ['Latam'] : ['España', 'Latam'];
+
+                // Collect brands grouped by region (only visible ones)
+                const regionGroups = {};
+                regionOrder.forEach(r => { regionGroups[r] = []; });
+                records.forEach(c => {
+                    if (regionGroups.hasOwnProperty(c.region)) {
+                        regionGroups[c.region].push(c.name);
+                    }
+                });
+
+                // Determine if any brand in a region is currently selected
+                const activeBrandRegion = (() => {
+                    if (this.brand === 'all') return null;
+                    const rec = records.find(c => c.name === this.brand);
+                    return rec ? rec.region : null;
+                })();
+
+                // Color map for brand dots
+                const getBrandColor = (name) => this.getColorForBrand ? this.getColorForBrand(name) : '#6366f1';
+
+                // Build HTML
+                // "Todos" button
+                let html = `<button onclick="app.setFilter('all')" class="brand-btn px-3 py-1 text-xs rounded transition uppercase ${this.brand === 'all' ? 'btn-active' : 'btn-inactive'}">Todos</button>`;
+
+                // Region buttons with dropdowns
+                regionOrder.forEach(region => {
+                    const brands = regionGroups[region] || [];
+                    if (brands.length === 0) return;
+
+                    const regionIsActive = activeBrandRegion === region;
+                    const regionLabel = region === 'España' ? '🇪🇸 España' : '🌎 Latam';
+                    const regionBtnClass = regionIsActive ? 'region-active' : 'region-inactive';
+                    const brandChip = regionIsActive ? `<span class="selected-brand-chip" style="background:${getBrandColor(this.brand)}">${this.brand}</span>` : '';
+
+                    const dropdownItems = brands.map(b => {
+                        const isActiveBrand = this.brand === b;
+                        const dot = `<span class="brand-dot" style="background:${getBrandColor(b)}"></span>`;
+                        const activeClass = isActiveBrand ? 'active-brand' : '';
+                        const activeBg = isActiveBrand ? `style="background:white;"` : '';
+                        return `<button onclick="app.setFilter('${b}')" class="region-dropdown-item ${activeClass}" ${activeBg}>${dot}${b}</button>`;
+                    }).join('');
+
+                    html += `
+                        <div class="region-group">
+                            <button class="region-btn ${regionBtnClass}">
+                                ${regionLabel}${brandChip}
+                                <span class="region-arrow">▼</span>
+                            </button>
+                            <div class="region-dropdown">
+                                ${dropdownItems}
+                            </div>
+                        </div>`;
+                });
+
+                // Admin "+" button to manage brands
                 if (this.user && this.user.role === 'admin') {
                     html += `<button onclick="app.openClientManager()" class="px-2 py-1 text-xs rounded transition bg-indigo-600 text-white ml-2 flex items-center justify-center font-bold hover:bg-indigo-500 shadow-lg" title="Gestionar Marcas">+</button>`;
                 }
+
                 container.innerHTML = html;
             },
 
             nav(view) {
+                if (this.user && this.user.region === 'Latam' && (view === 'it' || view === 'it-archived')) {
+                    this.nav('dashboard');
+                    return;
+                }
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-slate-800', 'text-white'));
                 const navEl = document.getElementById('nav-' + (view === 'it-archived' ? 'it' : view));
                 if (navEl) navEl.classList.add('bg-slate-800', 'text-white');
@@ -606,6 +834,10 @@
             setFilter(brand) { this.brand = brand; this.renderFilters(); this.renderAll(); },
             getData() {
                 return this.db.filter(u => {
+                    // Filter allowed brands for Latam users
+                    if (this.user && this.user.region === 'Latam') {
+                        if (!this.clients.includes(u.marca)) return false;
+                    }
                     const yearMatch = (this.year === 'all' || u.year === this.year);
                     const brandMatch = (this.brand === 'all' || u.marca === this.brand);
                     let monthMatch = true;
@@ -992,7 +1224,38 @@
                     return true;
                 });
 
-                document.getElementById('it-body').innerHTML = filtered.map(u => `<tr><td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.tabletSN || u.serial || 'S/N'}</small></td><td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td><td class="p-3 text-center"><div class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-indigo-500/50 text-indigo-400 font-bold text-xs">${this.getDaysSince(u.fechaAlta)}</div></td><td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td><td class="p-3 text-xs text-slate-400 italic">${u.itComment || ''}</td><td class="p-3 text-right flex justify-end gap-2 items-center"><button onclick="app.editITComment('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-4" title="Comentar"><span class="material-icons-round text-sm">comment</span></button><button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button><button onclick="app.archiveUserIT('${u.id}')" class="bg-amber-600/20 text-amber-500 px-2 py-1 rounded transition text-xs font-bold uppercase border border-amber-500/30 hover:bg-amber-600/30" title="Archivar"><span class="material-icons-round text-sm">inventory_2</span></button><button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button></td></tr>`).join('');
+                // Reset master checkbox
+                const masterCheckbox = document.getElementById('it-select-all');
+                if (masterCheckbox) masterCheckbox.checked = false;
+                this.updateBulkActionVisibility();
+
+                // Sort the list
+                const sorted = this.sortList(filtered, this.sort.it);
+
+                // Update sort icons in header
+                const iconNombre = document.getElementById('sort-icon-it-nombre');
+                if (iconNombre) iconNombre.innerHTML = this.getSortIcon('it', 'nombre');
+                const iconDea = document.getElementById('sort-icon-it-concesionario');
+                if (iconDea) iconDea.innerHTML = this.getSortIcon('it', 'concesionario');
+                const iconAlta = document.getElementById('sort-icon-it-fechaAlta');
+                if (iconAlta) iconAlta.innerHTML = this.getSortIcon('it', 'fechaAlta');
+                const iconConf = document.getElementById('sort-icon-it-fechaConfig');
+                if (iconConf) iconConf.innerHTML = this.getSortIcon('it', 'fechaConfig');
+
+                document.getElementById('it-body').innerHTML = sorted.map(u => `<tr>
+                    <td class="p-3"><input type="checkbox" class="it-row-checkbox w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0" value="${u.id}" onchange="app.updateBulkActionVisibility()"></td>
+                    <td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.tabletSN || u.serial || 'S/N'}</small></td>
+                    <td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td>
+                    <td class="p-3 text-center"><div class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-indigo-500/50 text-indigo-400 font-bold text-xs">${this.getDaysSince(u.fechaAlta)}</div></td>
+                    <td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td>
+                    <td class="p-3 text-xs text-slate-400 italic">${u.itComment || ''}</td>
+                    <td class="p-3 text-right flex justify-end gap-2 items-center">
+                        <button onclick="app.editITComment('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition mr-4" title="Comentar"><span class="material-icons-round text-sm">comment</span></button>
+                        <button onclick="app.sendITEmail('${u.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition" title="Enviar Email"><span class="material-icons-round text-sm">mail</span></button>
+                        <button onclick="app.archiveUserIT('${u.id}')" class="bg-amber-600/20 text-amber-500 px-2 py-1 rounded transition text-xs font-bold uppercase border border-amber-500/30 hover:bg-amber-600/30" title="Archivar"><span class="material-icons-round text-sm">inventory_2</span></button>
+                        <button onclick="app.setConfig('${u.id}')" class="bg-indigo-600 text-xs px-3 py-1 rounded uppercase font-bold text-white transition hover:bg-indigo-500">Actualizar</button>
+                    </td>
+                </tr>`).join('');
             },
 
             exportITCSV() {
@@ -1097,7 +1360,18 @@
                 const search = document.getElementById('search-it-archived').value.toLowerCase();
                 const filtered = list.filter(u => this.matchesSearch(u, search, 'it') || (u.motivoArchivado && u.motivoArchivado.toLowerCase().includes(search)));
 
-                document.getElementById('it-archived-body').innerHTML = filtered.map(u => `
+                // Update sort icons in header
+                const iconNombre = document.getElementById('sort-icon-itArchived-nombre');
+                if (iconNombre) iconNombre.innerHTML = this.getSortIcon('itArchived', 'nombre');
+                const iconSN = document.getElementById('sort-icon-itArchived-tabletSN');
+                if (iconSN) iconSN.innerHTML = this.getSortIcon('itArchived', 'tabletSN');
+                const iconArch = document.getElementById('sort-icon-itArchived-fechaArchivado');
+                if (iconArch) iconArch.innerHTML = this.getSortIcon('itArchived', 'fechaArchivado');
+
+                // Sort list
+                const sorted = this.sortList(filtered, this.sort.itArchived);
+
+                document.getElementById('it-archived-body').innerHTML = sorted.map(u => `
                     <tr>
                         <td class="p-3">
                             <b>${u.nombre} ${u.apellidos}</b><br>
@@ -1118,7 +1392,24 @@
 
             renderInformes() {
                 const search = document.getElementById('search-data').value.toLowerCase();
-                document.getElementById('data-body').innerHTML = this.getData().filter(u => this.matchesSearch(u, search)).map(u => {
+                const filtered = this.getData().filter(u => this.matchesSearch(u, search));
+
+                // Update sort icons in header
+                const iconId = document.getElementById('sort-icon-informes-id');
+                if (iconId) iconId.innerHTML = this.getSortIcon('informes', 'id');
+                const iconNombre = document.getElementById('sort-icon-informes-nombre');
+                if (iconNombre) iconNombre.innerHTML = this.getSortIcon('informes', 'nombre');
+                const iconMarca = document.getElementById('sort-icon-informes-marca');
+                if (iconMarca) iconMarca.innerHTML = this.getSortIcon('informes', 'marca');
+                const iconDea = document.getElementById('sort-icon-informes-concesionario');
+                if (iconDea) iconDea.innerHTML = this.getSortIcon('informes', 'concesionario');
+                const iconType = document.getElementById('sort-icon-informes-tipoAcceso');
+                if (iconType) iconType.innerHTML = this.getSortIcon('informes', 'tipoAcceso');
+
+                // Sort list
+                const sorted = this.sortList(filtered, this.sort.informes);
+
+                document.getElementById('data-body').innerHTML = sorted.map(u => {
                     let itStatus = 'No req';
                     if (u.reqConfig) {
                         if (u.isArchived) itStatus = '<span class="text-amber-500 font-bold">Archivado</span>';
@@ -1352,7 +1643,28 @@
                 if (form) { if (id) { const i = this.db.findIndex(u => u.id == id); this.db[i] = form; await this.apiUpdate(form); } else { this.db.push(form); await this.apiCreate(form); } this.renderAll(); }
             },
 
-            async setConfig(id) { const u = this.db.find(x => x.id == id); const { value: d } = await Swal.fire({ title: 'Fecha Intervención IT', input: 'date', background: '#1e293b' }); if (d) { u.fechaConfig = d; await this.apiUpdate(u); this.renderAll(); } },
+            async setConfig(id) {
+                const u = this.db.find(x => x.id == id);
+                if (!u) return;
+                const { value: d } = await Swal.fire({
+                    title: 'Fecha Intervención IT',
+                    input: 'date',
+                    background: '#1e293b',
+                    color: '#fff',
+                    confirmButtonColor: '#6366f1',
+                    inputValue: new Date().toISOString().split('T')[0]
+                });
+                if (d) {
+                    u.fechaConfig = d;
+                    u.isArchived = true;
+                    u.fechaArchivado = d;
+                    u.motivoArchivado = "iPad Configurado";
+                    u.itComment = "iPad Configurado";
+                    await this.apiUpdate(u);
+                    this.renderAll();
+                    Swal.fire({ icon: 'success', title: 'iPad Configurado y Archivado', background: '#1e293b', color: '#fff' });
+                }
+            },
 
             sendITEmail(id) {
                 const u = this.db.find(x => x.id == id);
@@ -1759,6 +2071,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                     <tr class="border-b border-slate-700">
                         <td class="p-2 text-xs font-mono text-slate-400">${u.username}</td>
                         <td class="p-2 text-xs uppercase ${u.role === 'admin' ? 'text-indigo-400' : 'text-slate-300'}">${u.role}</td>
+                        <td class="p-2 text-xs text-slate-300">${u.region || 'España'}</td>
                         <td class="p-2 text-xs text-slate-500">${u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never'}</td>
                         <td class="p-2 text-right space-x-2">
                             <button onclick="app.editUserAccount('${u.id}')" class="text-indigo-400 hover:text-indigo-300 transition" title="Editar"><span class="material-icons-round text-sm">edit</span></button>
@@ -1777,10 +2090,14 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                                     <input id="new-user" placeholder="Usuario" class="custom-field h-8 text-xs">
                                     <input id="new-pass" type="password" placeholder="Contraseña" class="custom-field h-8 text-xs">
                                 </div>
-                                <div class="grid grid-cols-2 gap-2">
+                                <div class="grid grid-cols-3 gap-2">
                                     <select id="new-role" class="custom-field h-8 text-xs">
                                         <option value="user">Usuario</option>
                                         <option value="admin">Administrador</option>
+                                    </select>
+                                    <select id="new-region" class="custom-field h-8 text-xs">
+                                        <option value="España">España</option>
+                                        <option value="Latam">Latam</option>
                                     </select>
                                     <button onclick="app.createUser()" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-bold transition">Crear</button>
                                 </div>
@@ -1788,7 +2105,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                             <div class="max-h-64 overflow-y-auto border border-slate-700 rounded-lg">
                                 <table class="w-full text-left">
                                     <thead class="bg-slate-800 text-slate-500 text-xs uppercase sticky top-0">
-                                        <tr><th class="p-2">Usuario</th><th class="p-2">Rol</th><th class="p-2">Acceso</th><th class="p-2 text-right">Acciones</th></tr>
+                                        <tr><th class="p-2">Usuario</th><th class="p-2">Rol</th><th class="p-2">Región</th><th class="p-2">Acceso</th><th class="p-2 text-right">Acciones</th></tr>
                                     </thead>
                                     <tbody class="text-slate-300">
                                         ${tableRows}
@@ -1805,11 +2122,12 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                 const username = document.getElementById('new-user').value;
                 const password = document.getElementById('new-pass').value;
                 const role = document.getElementById('new-role').value;
+                const region = document.getElementById('new-region').value;
 
                 if (!username || !password) return Swal.showValidationMessage('Faltan datos');
 
                 try {
-                    await this.apiCreateUser({ username, password, role });
+                    await this.apiCreateUser({ username, password, role, region });
                     this.openAdminPanel(); // Refresh
                 } catch (e) {
                     Swal.fire({ icon: 'error', title: 'Error', text: e.message, background: '#1e293b', color: '#fff' });
@@ -1839,13 +2157,21 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase">Región</label>
+                                <select id="edit-region" class="custom-field">
+                                    <option value="España" ${user.region === 'España' ? 'selected' : ''}>España</option>
+                                    <option value="Latam" ${user.region === 'Latam' ? 'selected' : ''}>Latam</option>
+                                </select>
+                            </div>
                         </div>
                     `,
                     background: '#1e293b', color: '#fff', showCancelButton: true, confirmButtonText: 'Guardar', confirmButtonColor: '#indigo-600',
                     preConfirm: () => {
                         return {
                             password: document.getElementById('edit-pass').value,
-                            role: document.getElementById('edit-role').value
+                            role: document.getElementById('edit-role').value,
+                            region: document.getElementById('edit-region').value
                         };
                     }
                 });
@@ -1872,8 +2198,8 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                 window.location.reload();
             },
 
-            async apiCreateClient(name) {
-                const res = await fetch('api/clients.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            async apiCreateClient(name, region) {
+                const res = await fetch('api/clients.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, region }) });
                 if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
             },
             async apiDeleteClient(id) {
@@ -1890,7 +2216,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
 
                 const listHtml = clients.map(c => `
                     <div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-1 border border-slate-700">
-                        <span class="text-white text-xs font-mono">${c.name}</span>
+                        <span class="text-white text-xs font-mono">${c.name} <span class="text-indigo-400 font-bold ml-1 text-[9px] uppercase">(${c.region || 'España'})</span></span>
                         <button onclick="app.deleteClient(${c.id})" class="text-red-400 hover:text-red-300"><span class="material-icons-round text-sm">delete</span></button>
                     </div>
                 `).join('');
@@ -1901,6 +2227,10 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         <div class="text-left">
                             <div class="flex gap-2 mb-4">
                                 <input id="new-client" class="custom-field h-8 text-xs flex-1" placeholder="Nombre nueva marca...">
+                                <select id="new-client-region" class="custom-field h-8 text-xs w-28">
+                                    <option value="España">España</option>
+                                    <option value="Latam">Latam</option>
+                                </select>
                                 <button onclick="app.createClient()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-bold">Crear</button>
                             </div>
                             <div class="max-h-60 overflow-y-auto pr-2">
@@ -2221,9 +2551,10 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
 
             async createClient() {
                 const name = document.getElementById('new-client').value.trim();
+                const region = document.getElementById('new-client-region').value;
                 if (!name) return;
                 try {
-                    await this.apiCreateClient(name);
+                    await this.apiCreateClient(name, region);
                     await this.fetchClients();
                     this.openClientManager();
                 } catch (e) { Swal.fire('Error', e.message, 'error'); }
@@ -2258,6 +2589,10 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                             <div class="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                 <p class="text-xs uppercase text-slate-500 font-bold mb-1">Rol</p>
                                 <p class="text-indigo-400 font-bold uppercase">${this.user.role}</p>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <p class="text-xs uppercase text-slate-500 font-bold mb-1">Región</p>
+                                <p class="text-indigo-400 font-bold uppercase">${this.user.region || 'España'}</p>
                             </div>
                             <div class="bg-slate-800 p-3 rounded-lg border border-slate-700">
                                 <p class="text-xs uppercase text-slate-500 font-bold mb-1">Último Acceso</p>

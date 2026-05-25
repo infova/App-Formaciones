@@ -192,3 +192,127 @@ input[type="datetime-local"] {
 .chart-box {
     height: 18rem;
 }
+
+/* ── REGION DROPDOWN MENU ─────────────────────────────────────── */
+.region-group {
+    position: relative;
+    display: inline-flex;
+}
+
+.region-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    border: none;
+    background: transparent;
+}
+
+.region-btn .region-arrow {
+    font-size: 8px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+}
+
+.region-group:hover .region-arrow {
+    transform: rotate(180deg);
+}
+
+.region-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    min-width: 140px;
+    z-index: 100;
+    overflow: hidden;
+    /* Hidden by default */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.region-group:hover .region-dropdown,
+.region-group:focus-within .region-dropdown {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.region-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.region-dropdown-item:hover {
+    background: #334155;
+    color: #fff;
+}
+
+.region-dropdown-item.active-brand {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.region-dropdown-item .brand-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.region-btn.region-active {
+    background: white;
+    color: #0f172a;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.selected-brand-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 5px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.region-btn.region-inactive {
+    color: #94a3b8;
+}
+
+.region-btn.region-inactive:hover {
+    background: #334155;
+    color: #e2e8f0;
+}

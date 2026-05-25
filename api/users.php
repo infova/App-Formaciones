@@ -8,7 +8,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query("SELECT id, username, role, brands, lastLogin FROM users");
+        $stmt = $pdo->query("SELECT id, username, role, brands, region, lastLogin FROM users");
         echo json_encode($stmt->fetchAll());
         break;
 
@@ -21,12 +21,13 @@ switch ($method) {
         }
         try {
             $hash = password_hash($data['password'], PASSWORD_BCRYPT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password, role, brands) VALUES (?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO users (username, password, role, brands, region) VALUES (?, ?, ?, ?, ?)");
             $stmt->execute([
                 $data['username'],
                 $hash,
                 $data['role'] ?? 'user',
-                $data['brands'] ?? 'All'
+                $data['brands'] ?? 'All',
+                $data['region'] ?? 'España'
             ]);
             echo json_encode(['success' => true]);
         } catch (PDOException $e) {
@@ -44,11 +45,11 @@ switch ($method) {
         $data = json_decode(file_get_contents('php://input'), true);
         if (!empty($data['password'])) {
             $hash = password_hash($data['password'], PASSWORD_BCRYPT);
-            $stmt = $pdo->prepare("UPDATE users SET password = ?, role = ?, brands = ? WHERE id = ?");
-            $stmt->execute([$hash, $data['role'] ?? 'user', $data['brands'] ?? 'All', $id]);
+            $stmt = $pdo->prepare("UPDATE users SET password = ?, role = ?, brands = ?, region = ? WHERE id = ?");
+            $stmt->execute([$hash, $data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $id]);
         } else {
-            $stmt = $pdo->prepare("UPDATE users SET role = ?, brands = ? WHERE id = ?");
-            $stmt->execute([$data['role'] ?? 'user', $data['brands'] ?? 'All', $id]);
+            $stmt = $pdo->prepare("UPDATE users SET role = ?, brands = ?, region = ? WHERE id = ?");
+            $stmt->execute([$data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $id]);
         }
         echo json_encode(['success' => true]);
         break;

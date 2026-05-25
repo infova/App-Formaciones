@@ -20,8 +20,8 @@ switch ($method) {
             exit;
         }
         try {
-            $stmt = $pdo->prepare("INSERT INTO clients (name) VALUES (?)");
-            $stmt->execute([$data['name']]);
+            $stmt = $pdo->prepare("INSERT INTO clients (name, region) VALUES (?, ?)");
+            $stmt->execute([$data['name'], $data['region'] ?? 'España']);
             echo json_encode(['success' => true]);
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) {
@@ -36,8 +36,8 @@ switch ($method) {
     case 'PUT':
         $id = $_GET['id'] ?? null;
         $data = json_decode(file_get_contents('php://input'), true);
-        $stmt = $pdo->prepare("UPDATE clients SET name = ? WHERE id = ?");
-        $stmt->execute([$data['name'], $id]);
+        $stmt = $pdo->prepare("UPDATE clients SET name = ?, region = ? WHERE id = ?");
+        $stmt->execute([$data['name'], $data['region'] ?? 'España', $id]);
         echo json_encode(['success' => true]);
         break;
 
