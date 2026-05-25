@@ -89,6 +89,77 @@ region VARCHAR(50) DEFAULT 'España'
         // Ignorar si la columna ya existe
     }
 
+    // Logotipo SVG inline por marca
+    try {
+        $pdo->exec("ALTER TABLE clients ADD COLUMN logo_svg TEXT NULL");
+    } catch (PDOException $e) {
+        // Ignorar si la columna ya existe
+    }
+
+    // Vincular registros con instancia concreta de marca (país)
+    try {
+        $pdo->exec("ALTER TABLE records ADD COLUMN client_id INT NULL");
+    } catch (PDOException $e) {
+        // Ignorar si la columna ya existe
+    }
+
+    // Tabla Regiones
+    $pdo->exec("CREATE TABLE IF NOT EXISTS regions (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(255) UNIQUE NOT NULL,
+flag_svg TEXT DEFAULT NULL,
+sort_order INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Tabla Países
+    $pdo->exec("CREATE TABLE IF NOT EXISTS countries (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(255) NOT NULL,
+region_id INT NOT NULL,
+flag_svg TEXT DEFAULT NULL,
+sort_order INT DEFAULT 0,
+FOREIGN KEY (region_id) REFERENCES regions(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Columna country_id en clients
+    try {
+        $pdo->exec("ALTER TABLE clients ADD COLUMN country_id INT NULL");
+    } catch (PDOException $e) {
+        // Ignorar si la columna ya existe
+    }
+
+    // Cambiar UNIQUE(name) → UNIQUE(name, country_id): misma marca en distintos países
+    try {
+        $pdo->exec("ALTER TABLE clients DROP INDEX name");
+    } catch (PDOException $e) { /* ignorar si ya fue eliminado */
+    }
+    try {
+        $pdo->exec("ALTER TABLE clients ADD UNIQUE INDEX uq_clients_name_country (name, country_id)");
+    } catch (PDOException $e) { /* ignorar si ya existe */
+    }
+
+    // Datos iniciales de regiones
+    $stmt = $pdo->query("SELECT COUNT(*) FROM regions");
+    if ($stmt->fetchColumn() == 0) {
+        $spainSvg = '<svg style="display:inline-block;width:16px;height:11px;border-radius:2px;vertical-align:middle" viewBox="0 0 16 11"><rect width="16" height="11" fill="#c60b1e"/><rect y="2.75" width="16" height="5.5" fill="#ffc400"/></svg>';
+        $stmt = $pdo->prepare("INSERT INTO regions (name, flag_svg, sort_order) VALUES (?, ?, ?)");
+        $stmt->execute(['España', $spainSvg, 1]);
+        $stmt->execute(['Latam', null, 2]);
+    }
+
+    // Datos iniciales de países
+    $stmt = $pdo->query("SELECT COUNT(*) FROM countries");
+    if ($stmt->fetchColumn() == 0) {
+        $spainRegion = $pdo->query("SELECT id FROM regions WHERE name = 'España'")->fetchColumn();
+        $latamRegion = $pdo->query("SELECT id FROM regions WHERE name = 'Latam'")->fetchColumn();
+        $spainSvg = '<svg style="display:inline-block;width:16px;height:11px;border-radius:2px;vertical-align:middle" viewBox="0 0 16 11"><rect width="16" height="11" fill="#c60b1e"/><rect y="2.75" width="16" height="5.5" fill="#ffc400"/></svg>';
+        $stmt = $pdo->prepare("INSERT INTO countries (name, region_id, flag_svg, sort_order) VALUES (?, ?, ?, ?)");
+        $stmt->execute(['España', $spainRegion, $spainSvg, 1]);
+        $stmt->execute(['Chile', $latamRegion, null, 1]);
+        $stmt->execute(['Perú', $latamRegion, null, 2]);
+        $stmt->execute(['México', $latamRegion, null, 3]);
+    }
+
     // Usuario admin por defecto
     $stmt = $pdo->query("SELECT COUNT(*) FROM users");
     if ($stmt->fetchColumn() == 0) {
@@ -111,6 +182,11 @@ region VARCHAR(50) DEFAULT 'España'
         }
     }
 
+    // Migrar clients España existentes → country_id del país España
+    $spainCountryId = $pdo->query("SELECT id FROM countries WHERE name = 'España'")->fetchColumn();
+    if ($spainCountryId) {
+        $pdo->exec("UPDATE clients SET country_id = $spainCountryId WHERE region = 'España' AND country_id IS NULL");
+    }
 } catch (\PDOException $e) {
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Connection failed: ' . $e->getMessage()]);
@@ -136,8 +212,8 @@ function getDB()
 function checkAuth()
 {
     // Basic implementation: if this is called from the frontend,
-// it usually expects a user object.
-// We'll return a minimal object so it doesn't crash.
+    // it usually expects a user object.
+    // We'll return a minimal object so it doesn't crash.
     return ['role' => 'admin'];
 }
 // No closing tag to prevent whitespace issues

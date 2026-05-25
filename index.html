@@ -118,7 +118,7 @@
 
         <div class="px-6 py-4 border-t border-slate-700/50 mt-auto bg-slate-800/20">
             <p class="text-[10px] text-slate-500 uppercase font-bold mb-3 tracking-wider">Inventario Total</p>
-            <div class="flex justify-between items-center mb-2"><span
+            <div id="sidebar-tablets-row" class="flex justify-between items-center mb-2"><span
                     class="text-xs text-slate-300 flex items-center gap-2"><span
                         class="material-icons-round text-sm text-blue-400">tablet_mac</span> Tablets</span><span
                     class="text-sm font-bold text-white bg-slate-700 px-2 rounded" id="count-tablets">0</span></div>
@@ -190,7 +190,7 @@
 
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- iPad Pendientes -->
-                    <div
+                    <div id="card-kpi-ipad"
                         class="bg-sidebar p-4 rounded-xl border border-amber-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
                         <div
                             class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
@@ -212,7 +212,7 @@
                         <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Por certificar</p>
                     </div>
                     <!-- iPad Configuraciones -->
-                    <div
+                    <div id="card-kpi-config"
                         class="bg-sidebar p-4 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
                         <div
                             class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
@@ -500,6 +500,8 @@
             chartBrands: null,
             chartAnnual: null,
             clients: [], // Will fetch from API
+            clientRecords: [], // [{id, name, region, country_id, country_name}]
+            regionsData: [],   // [{id, name, flag_svg, countries:[{id,name}]}]
             sort: {
                 it: { column: 'fechaAlta', direction: 'desc' }, // default: newest first
                 itArchived: { column: 'fechaArchivado', direction: 'desc' }, // default: newest first
@@ -532,6 +534,14 @@
                     }
                 }
 
+                // Ocultar elementos IT en dashboard y sidebar para Latam
+                if (this.user.region === 'Latam') {
+                    ['card-kpi-ipad', 'card-kpi-config', 'sidebar-tablets-row'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.style.display = 'none';
+                    });
+                }
+
                 this.year = document.getElementById('global-year').value;
                 const d = new Date();
                 const start = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -548,7 +558,7 @@
                     document.getElementById('export-end').value = end.toLocaleDateString('en-CA');
                 }
 
-                await Promise.all([this.fetchData(), this.fetchClients()]);
+                await Promise.all([this.fetchData(), this.fetchClients(), this.fetchRegions()]);
 
                 this.nav('dashboard');
                 this.renderFilters();
@@ -568,14 +578,26 @@
                     if (res.ok) {
                         const data = await res.json();
                         this.clientRecords = data;
-                        this.clients = data
-                            .filter(c => !this.user || this.user.region === 'España' || c.region === 'Latam')
-                            .map(c => c.name);
+                        this.clients = [...new Set(data
+                            .filter(c => !this.user || this.user.region === 'España' || c.region_name === 'Latam' || c.region === 'Latam')
+                            .map(c => c.name))];
                     }
                 } catch (e) {
                     console.error("Error fetching clients", e);
                     this.clients = ['Kia', 'Hyundai', 'Kia Canarias']; // Fallback
                     this.clientRecords = this.clients.map((name, index) => ({ id: index + 1, name, region: 'España' }));
+                }
+            },
+
+            async fetchRegions() {
+                try {
+                    const res = await fetch('api/regions.php');
+                    if (res.ok) {
+                        this.regionsData = await res.json();
+                    }
+                } catch (e) {
+                    console.error("Error fetching regions", e);
+                    this.regionsData = [];
                 }
             },
 
@@ -587,6 +609,82 @@
                         this.renderAll();
                     }
                 } catch (e) { console.error(e); }
+            },
+
+            async runClientMigration() {
+                const unlinked = this.db.filter(u => !u.client_id && u.marca);
+                if (unlinked.length === 0) {
+                    return Swal.fire({ title: 'Todo vinculado', text: 'No hay registros sin marca asignada.', icon: 'info', background: '#1e293b', color: '#fff' });
+                }
+
+                // Agrupar por nombre de marca
+                const byMarca = {};
+                unlinked.forEach(u => { byMarca[u.marca] = (byMarca[u.marca] || 0) + 1; });
+
+                const assignments = [];
+                const skipped = [];
+
+                for (const [marca, count] of Object.entries(byMarca)) {
+                    const matches = this.clientRecords.filter(c => c.name === marca);
+                    if (matches.length === 0) {
+                        skipped.push(`${marca} (sin cliente coincidente)`);
+                    } else if (matches.length === 1) {
+                        // Asignación automática
+                        assignments.push({ marca, client_id: matches[0].id, count });
+                    } else {
+                        // Ambiguo: pedir al usuario
+                        const opts = matches.map(c => `<option value="${c.id}">${c.name} — ${c.country_name || c.region_name || c.region}</option>`).join('');
+                        const { value: chosenId, isDismissed } = await Swal.fire({
+                            title: `Asignar "${marca}"`,
+                            html: `<p style="color:#94a3b8;margin-bottom:8px">${count} registro(s) sin país asignado.<br>¿A qué cliente pertenecen?</p>
+                                   <select id="mig-sel" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px">
+                                     <option value="">— Saltar esta marca —</option>${opts}
+                                   </select>`,
+                            background: '#1e293b', color: '#fff',
+                            confirmButtonText: 'Asignar', confirmButtonColor: '#6366f1',
+                            showCancelButton: true, cancelButtonText: 'Cancelar todo',
+                            preConfirm: () => document.getElementById('mig-sel').value
+                        });
+                        if (isDismissed) return; // cancelar todo el proceso
+                        if (chosenId) assignments.push({ marca, client_id: parseInt(chosenId), count });
+                        else skipped.push(`${marca} (omitido)`);
+                    }
+                }
+
+                if (assignments.length === 0) {
+                    return Swal.fire({ title: 'Sin cambios', text: 'No se realizó ninguna asignación.', icon: 'info', background: '#1e293b', color: '#fff' });
+                }
+
+                // Confirmación antes de aplicar
+                const summary = assignments.map(a => `• ${a.marca}: ${a.count} registro(s)`).join('\n');
+                const { isConfirmed } = await Swal.fire({
+                    title: 'Confirmar migración',
+                    html: `<pre style="text-align:left;color:#94a3b8;font-size:13px;white-space:pre-wrap;margin:0">${summary}</pre>`,
+                    icon: 'question', background: '#1e293b', color: '#fff',
+                    confirmButtonText: 'Aplicar', confirmButtonColor: '#10b981',
+                    showCancelButton: true, cancelButtonText: 'Cancelar'
+                });
+                if (!isConfirmed) return;
+
+                try {
+                    const res = await fetch('api/records.php?migrate_clients=1', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(assignments)
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        await this.fetchData();
+                        Swal.fire({
+                            title: 'Migración completada',
+                            html: `<p style="color:#94a3b8">${result.updated} registro(s) vinculado(s) correctamente.</p>` +
+                                  (skipped.length ? `<p style="color:#f59e0b;margin-top:8px;font-size:12px">Omitidos: ${skipped.join(', ')}</p>` : ''),
+                            icon: 'success', background: '#1e293b', color: '#fff'
+                        });
+                    }
+                } catch (e) {
+                    Swal.fire({ title: 'Error', text: e.message, icon: 'error', background: '#1e293b', color: '#fff' });
+                }
             },
 
             hexToRgba(hex, alpha) {
@@ -770,23 +868,30 @@ const start = new Date(dateStr);
                 const records = this.clientRecords || this.clients.map(n => ({ name: n, region: 'España' }));
 
                 // Determine which regions are visible for this user
-                const isLatam = this.user && this.user.region === 'Latam';
-                const regionOrder = isLatam ? ['Latam'] : ['España', 'Latam'];
+                const allRegions = (this.regionsData && this.regionsData.length > 0)
+                    ? this.regionsData.map(r => r.name)
+                    : ['España', 'Latam'];
+                const userRegion = this.user?.region;
+                // España users and admins see all regions; other specific-region users see only theirs
+                const regionOrder = (!userRegion || userRegion === 'All' || userRegion === 'España')
+                    ? allRegions
+                    : allRegions.filter(r => r === userRegion);
 
                 // Collect brands grouped by region (only visible ones)
                 const regionGroups = {};
                 regionOrder.forEach(r => { regionGroups[r] = []; });
                 records.forEach(c => {
-                    if (regionGroups.hasOwnProperty(c.region)) {
-                        regionGroups[c.region].push(c.name);
+                    const rName = c.region_name || c.region;
+                    if (regionGroups.hasOwnProperty(rName)) {
+                        regionGroups[rName].push(c);
                     }
                 });
 
                 // Determine if any brand in a region is currently selected
                 const activeBrandRegion = (() => {
                     if (this.brand === 'all') return null;
-                    const rec = records.find(c => c.name === this.brand);
-                    return rec ? rec.region : null;
+                    const rec = this.clientRecords.find(c => c.id == this.brand);
+                    return rec ? (rec.region_name || rec.region) : null;
                 })();
 
                 // Color map for brand dots
@@ -798,24 +903,50 @@ const start = new Date(dateStr);
 
                 // Region buttons with dropdowns
                 regionOrder.forEach(region => {
-                    const brands = regionGroups[region] || [];
-                    if (brands.length === 0) return;
+                    const regionClients = regionGroups[region] || [];
+                    if (regionClients.length === 0) return;
 
                     const regionIsActive = activeBrandRegion === region;
-                    const regionLabel = region === 'España'
-                        ? `<svg style="display:inline-block;width:16px;height:11px;border-radius:2px;vertical-align:middle;margin-right:3px;flex-shrink:0" viewBox="0 0 16 11"><rect width="16" height="11" fill="#c60b1e"/><rect y="2.75" width="16" height="5.5" fill="#ffc400"/></svg> España`
-                        : '🌎 Latam';
+                    const _rDef = this.regionsData ? this.regionsData.find(r => r.name === region) : null;
+                    const _flagHtml = _rDef?.flag_svg
+                        ? _rDef.flag_svg.replace('style="', 'style="margin-right:3px;flex-shrink:0;')
+                        : '🌎 ';
+                    const regionLabel = `${_flagHtml}${region}`;
                     const isRegionFilterOn = this.regionFilter === region;
                     const regionBtnClass = regionIsActive ? 'region-active' : (isRegionFilterOn ? 'region-filter-on' : 'region-filter-off region-inactive');
-                    const brandChip = regionIsActive ? `<span class="selected-brand-chip" style="background:${getBrandColor(this.brand)}">${this.brand}</span>` : '';
+                    const brandChip = regionIsActive ? `<span class="selected-brand-chip" style="background:${getBrandColor(this.getBrandName())}">${this.getBrandName()}</span>` : '';
 
-                    const dropdownItems = brands.map(b => {
-                        const isActiveBrand = this.brand === b;
-                        const dot = `<span class="brand-dot" style="background:${getBrandColor(b)}"></span>`;
-                        const activeClass = isActiveBrand ? 'active-brand' : '';
-                        const activeBg = isActiveBrand ? `style="background:white;"` : '';
-                        return `<button onclick="app.setFilter('${b}')" class="region-dropdown-item ${activeClass}" ${activeBg}>${dot}${b}</button>`;
-                    }).join('');
+                    // Group by country within the region dropdown
+                    const byCountry = {};
+                    regionClients.forEach(c => {
+                        const key = c.country_name || region;
+                        if (!byCountry[key]) byCountry[key] = [];
+                        byCountry[key].push(c);
+                    });
+
+                    let dropdownItems = '';
+                    const countryNames = Object.keys(byCountry);
+                    countryNames.forEach((countryName, idx) => {
+                        // Cabecera de país — siempre visible, con separador superior desde el 2º país
+                        const sepStyle = idx > 0
+                            ? 'margin-top:6px;padding-top:6px;border-top:1px solid rgba(51,65,85,0.7);'
+                            : 'padding-top:4px;';
+                        // Buscar flag del país desde regionsData
+                        let countryFlag = '';
+                        for (const rd of (this.regionsData || [])) {
+                            const co = (rd.countries || []).find(co => co.name === countryName);
+                            if (co?.flag_svg) { countryFlag = co.flag_svg.replace('style="', 'style="width:13px;height:9px;border-radius:1px;vertical-align:middle;margin-right:4px;flex-shrink:0;') + ' '; break; }
+                        }
+                        dropdownItems += `<div style="${sepStyle}padding-left:10px;padding-right:8px;padding-bottom:3px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;display:flex;align-items:center;">${countryFlag}${countryName}</div>`;
+                        byCountry[countryName].forEach(c => {
+                            const isActiveBrand = this.brand == c.id;
+                            const dot = c.logo_svg
+                                ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:16px;flex-shrink:0;overflow:hidden;margin-right:2px;">${c.logo_svg}</span>`
+                                : `<span class="brand-dot" style="background:${getBrandColor(c.name)}"></span>`;
+                            const activeClass = isActiveBrand ? 'active-brand' : '';
+                            dropdownItems += `<button onclick="app.setFilter(${c.id})" class="region-dropdown-item ${activeClass}" style="padding-left:18px;${isActiveBrand ? 'background:white;' : ''}">${dot}${c.name}</button>`;
+                        });
+                    });
 
                     html += `
                         <div class="region-group ${this.openDropdown === region ? 'is-open' : ''}">
@@ -832,7 +963,7 @@ const start = new Date(dateStr);
 
                 // Admin "+" button to manage brands
                 if (this.user && this.user.role === 'admin') {
-                    html += `<button onclick="app.openClientManager()" class="px-2 py-1 text-xs rounded transition bg-indigo-600 text-white ml-2 flex items-center justify-center font-bold hover:bg-indigo-500 shadow-lg" title="Gestionar Marcas">+</button>`;
+                    html += `<button onclick="app.openRegionManager()" class="px-2 py-1 text-xs rounded transition bg-indigo-600 text-white ml-2 flex items-center justify-center font-bold hover:bg-indigo-500 shadow-lg" title="Gestionar Regiones y Marcas">+</button>`;
                 }
 
                 container.innerHTML = html;
@@ -879,7 +1010,7 @@ const start = new Date(dateStr);
                         if (!this.clients.includes(u.marca)) return false;
                     }
                     const yearMatch = (this.year === 'all' || u.year === this.year);
-                    const brandMatch = (this.brand === 'all' || u.marca === this.brand);
+                    const brandMatch = this.matchesBrand(u);
                     let monthMatch = true;
                     if (this.month !== 'all') {
                         const targetDate = u.formacion.date || u.fechaAlta;
@@ -924,10 +1055,69 @@ const start = new Date(dateStr);
                 document.getElementById('count-licenses').innerText = data.filter(u => u.tipoAcceso !== 'Tablet').length;
                 const container = document.getElementById('sidebar-dynamic-stats');
                 container.innerHTML = '';
-                this.clients.forEach(c => {
-                    const count = data.filter(u => u.marca === c && u.formacion.status === 'Realizada').length;
-                    let color = c === 'Kia' ? 'bg-kia' : (c === 'Hyundai' ? 'bg-blue-400' : 'bg-indigo-500');
-                    container.innerHTML += `<div class="flex justify-between items-center text-[10px]"><span class="flex items-center gap-2 uppercase font-semibold"><div class="w-2 h-2 rounded-full ${color}"></div> ${c}</span><span class="font-bold text-white">${count}</span></div>`;
+
+                // Misma lógica de visibilidad de regiones que renderFilters
+                const userRegion = this.user?.region;
+                const allRegionNames = (this.regionsData && this.regionsData.length > 0)
+                    ? this.regionsData.map(r => r.name)
+                    : ['España', 'Latam'];
+                const visibleRegions = (!userRegion || userRegion === 'All' || userRegion === 'España')
+                    ? allRegionNames
+                    : [userRegion];
+
+                // Filtrar clientes visibles según región del usuario
+                const visibleClients = (this.clientRecords || []).filter(c =>
+                    visibleRegions.includes(c.region_name || c.region)
+                );
+
+                // Detectar nombres duplicados entre países para etiquetarlos
+                const nameCounts = {};
+                visibleClients.forEach(c => { nameCounts[c.name] = (nameCounts[c.name] || 0) + 1; });
+
+                // Agrupar por región > país para mostrar cabeceras
+                const grouped = {};
+                visibleClients.forEach(c => {
+                    const rk = c.region_name || c.region || 'Sin región';
+                    const ck = c.country_name || rk;
+                    if (!grouped[rk]) grouped[rk] = {};
+                    if (!grouped[rk][ck]) grouped[rk][ck] = [];
+                    grouped[rk][ck].push(c);
+                });
+
+                const regionKeys = Object.keys(grouped);
+                const multiRegion = regionKeys.length > 1;
+
+                regionKeys.forEach((rk, ri) => {
+                    if (multiRegion) {
+                        const sepStyle = ri > 0 ? 'margin-top:8px;padding-top:6px;border-top:1px solid rgba(51,65,85,0.6);' : 'padding-top:2px;';
+                        container.innerHTML += `<div style="${sepStyle}font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#6366f1;margin-bottom:3px;">${rk}</div>`;
+                    }
+                    const countryKeys = Object.keys(grouped[rk]);
+                    const multiCountry = countryKeys.length > 1;
+                    countryKeys.forEach((ck, ci) => {
+                        if (multiCountry) {
+                            const cSep = ci > 0 ? 'margin-top:5px;' : '';
+                            container.innerHTML += `<div style="${cSep}font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#64748b;margin-bottom:2px;padding-left:2px;">${ck}</div>`;
+                        }
+                        grouped[rk][ck].forEach(c => {
+                            const count = data.filter(u =>
+                                u.formacion.status === 'Realizada' &&
+                                ((u.client_id && u.client_id == c.id) || (!u.client_id && u.marca === c.name))
+                            ).length;
+                            const color = this.getColorForBrand ? this.getColorForBrand(c.name) : '#6366f1';
+                            const indent = multiCountry ? 'padding-left:10px;' : '';
+                            const brandIcon = c.logo_svg
+                                ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:14px;flex-shrink:0;overflow:hidden;">${c.logo_svg}</span>`
+                                : `<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${color}"></span>`;
+                            container.innerHTML += `<div class="flex justify-between items-center" style="font-size:10px;${indent}">
+                                <span class="flex items-center gap-2 uppercase font-semibold" style="color:#cbd5e1">
+                                    ${brandIcon}
+                                    ${c.name}
+                                </span>
+                                <span class="font-bold text-white">${count}</span>
+                            </div>`;
+                        });
+                    });
                 });
             },
 
@@ -950,7 +1140,7 @@ const start = new Date(dateStr);
                     if (!dealers[u.concesionario]) dealers[u.concesionario] = [];
                     dealers[u.concesionario].push(`${u.nombre} ${u.apellidos} (${u.formacion.status})`);
                 });
-                let text = `📢 PENDIENTES DE FORMACIÓN (${this.brand === 'all' ? 'GLOBAL' : this.brand})\n\n`;
+                let text = `📢 PENDIENTES DE FORMACIÓN (${this.getBrandName()})\n\n`;
                 for (let d in dealers) { text += `📍 ${d}:\n- ${dealers[d].join('\n- ')}\n\n`; }
                 navigator.clipboard.writeText(text);
                 Swal.fire({ title: 'Copiado', text: 'Resumen listo para pegar.', icon: 'success', background: '#1e293b' });
@@ -986,11 +1176,15 @@ const start = new Date(dateStr);
                 document.getElementById('progress-fill').style.width = pct + '%';
 
                 if (this.chartDist) this.chartDist.destroy();
+                const isLatamUser = this.user && this.user.region === 'Latam';
+                const distLabels = isLatamUser ? ['Nueva Licencia', 'Formación General'] : ['Cambio Titular iPad', 'Nueva Licencia', 'Formación General'];
+                const distData   = isLatamUser ? [newCloudLicenses, infoAccess] : [iPadOwnershipChanges, newCloudLicenses, infoAccess];
+                const distColors = isLatamUser ? ['#f59e0b', '#8b5cf6'] : ['#3b82f6', '#f59e0b', '#8b5cf6'];
                 this.chartDist = new Chart(document.getElementById('chart-dist'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Cambio Titular iPad', 'Nueva Licencia', 'Formación General'],
-                        datasets: [{ data: [iPadOwnershipChanges, newCloudLicenses, infoAccess], backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6'], borderWidth: 0 }]
+                        labels: distLabels,
+                        datasets: [{ data: distData, backgroundColor: distColors, borderWidth: 0 }]
                     },
                     options: {
                         responsive: true,
@@ -1094,13 +1288,13 @@ const start = new Date(dateStr);
                             });
                         } else {
                             const mDots = Array(labelsLine.length).fill(0);
-                            allCompleted.filter(u => u.marca === this.brand).forEach(u => {
+                            allCompleted.filter(u => this.matchesBrand(u)).forEach(u => {
                                 const d = new Date(u.formacion.dateCompleted || u.formacion.date);
                                 const label = `${monthsBase[d.getMonth()]} ${d.getFullYear()}`;
                                 const idx = labelsLine.indexOf(label);
                                 if (idx !== -1) mDots[idx]++;
                             });
-                            ds.push({ label: this.brand, data: mDots, backgroundColor: this.getColorForBrand(this.brand), borderRadius: 4 });
+                            ds.push({ label: this.getBrandName(), data: mDots, backgroundColor: this.getColorForBrand(this.getBrandName()), borderRadius: 4 });
                         }
                     }
                 } else {
@@ -1125,11 +1319,11 @@ const start = new Date(dateStr);
                         });
                     } else {
                         const mDots = Array(12).fill(0);
-                        yearData.filter(u => u.marca === this.brand).forEach(u => {
+                        yearData.filter(u => this.matchesBrand(u)).forEach(u => {
                             const d = new Date(u.formacion.dateCompleted || u.formacion.date);
                             const m = d.getMonth(); if (m >= 0 && m < 12) mDots[m]++;
                         });
-                        ds.push({ label: this.brand, data: mDots, backgroundColor: this.getColorForBrand(this.brand), borderRadius: 4 });
+                        ds.push({ label: this.getBrandName(), data: mDots, backgroundColor: this.getColorForBrand(this.getBrandName()), borderRadius: 4 });
                     }
                 }
 
@@ -1242,6 +1436,21 @@ const start = new Date(dateStr);
                 if (brand === 'Kia') return '#ef4444'; if (brand === 'Hyundai') return '#3b82f6'; if (brand === 'Kia Canarias') return '#f97316';
                 let h = 0; for (let i = 0; i < brand.length; i++) h = brand.charCodeAt(i) + ((h << 5) - h);
                 return palette[Math.abs(h) % palette.length];
+            },
+
+            getBrandName() {
+                if (this.brand === 'all') return 'GLOBAL';
+                const rec = this.clientRecords.find(c => c.id == this.brand);
+                return rec ? rec.name : String(this.brand);
+            },
+            matchesBrand(u) {
+                if (this.brand === 'all') return true;
+                if (u.client_id && u.client_id == this.brand) return true;
+                if (!u.client_id) {
+                    const rec = this.clientRecords.find(c => c.id == this.brand);
+                    return rec ? u.marca === rec.name : false;
+                }
+                return false;
             },
 
             renderIT() {
@@ -1606,7 +1815,13 @@ const start = new Date(dateStr);
                 const user = id ? this.db.find(u => u.id == id) : null;
                 const years = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033];
                 const yearOptions = years.map(y => `<option value="${y}" ${user?.year == y || (!user && y == 2026) ? 'selected' : ''}>${y}</option>`).join('');
-                let brandOptions = this.clients.map(c => `<option value="${c}" ${user?.marca === c ? 'selected' : ''}>${c}</option>`).join('');
+                const _nameCounts = {};
+                this.clientRecords.forEach(c => { _nameCounts[c.name] = (_nameCounts[c.name] || 0) + 1; });
+                let brandOptions = this.clientRecords.map(c => {
+                    const label = _nameCounts[c.name] > 1 ? `${c.name} (${c.country_name || c.region_name || c.region})` : c.name;
+                    const selected = user?.client_id == c.id || (!user?.client_id && user?.marca === c.name);
+                    return `<option value="${c.id}" ${selected ? 'selected' : ''}>${label}</option>`;
+                }).join('');
                 brandOptions = `<option value="" disabled ${!user ? 'selected' : ''}>Seleccionar Marca...</option>` + brandOptions;
 
                 const { value: form } = await Swal.fire({
@@ -1687,7 +1902,9 @@ const start = new Date(dateStr);
                         const brandVal = document.getElementById('sw-brand').value;
                         if (!idVal) return Swal.showValidationMessage('ID obligatorio');
                         if (!brandVal) return Swal.showValidationMessage('Debes seleccionar una Marca');
-                        return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: document.getElementById('sw-brand').value, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, tabletSN: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
+                        const _bId = document.getElementById('sw-brand').value;
+                        const _bRec = app.clientRecords.find(c => c.id == _bId);
+                        return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: _bRec?.name || _bId, client_id: _bId ? parseInt(_bId) : null, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, tabletSN: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
                     }
                 });
                 if (form) { if (id) { const i = this.db.findIndex(u => u.id == id); this.db[i] = form; await this.apiUpdate(form); } else { this.db.push(form); await this.apiCreate(form); } this.renderAll(); }
@@ -2117,6 +2334,11 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
             async openAdminPanel() {
                 this.adminUsers = await this.apiGetUsers();
 
+                // Build region options dynamically
+                const regionOptions = (this.regionsData && this.regionsData.length > 0)
+                    ? this.regionsData.map(r => `<option value="${r.name}">${r.name}</option>`).join('')
+                    : '<option value="España">España</option><option value="Latam">Latam</option>';
+
                 const tableRows = this.adminUsers.map(u => `
                     <tr class="border-b border-slate-700">
                         <td class="p-2 text-xs font-mono text-slate-400">${u.username}</td>
@@ -2146,8 +2368,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                                         <option value="admin">Administrador</option>
                                     </select>
                                     <select id="new-region" class="custom-field h-8 text-xs">
-                                        <option value="España">España</option>
-                                        <option value="Latam">Latam</option>
+                                        ${regionOptions}
                                     </select>
                                     <button onclick="app.createUser()" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-bold transition">Crear</button>
                                 </div>
@@ -2210,8 +2431,10 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                             <div>
                                 <label class="text-xs font-bold text-slate-500 uppercase">Región</label>
                                 <select id="edit-region" class="custom-field">
-                                    <option value="España" ${user.region === 'España' ? 'selected' : ''}>España</option>
-                                    <option value="Latam" ${user.region === 'Latam' ? 'selected' : ''}>Latam</option>
+                                    ${(this.regionsData && this.regionsData.length > 0)
+                                        ? this.regionsData.map(r => `<option value="${r.name}" ${user.region === r.name ? 'selected' : ''}>${r.name}</option>`).join('')
+                                        : `<option value="España" ${user.region === 'España' ? 'selected' : ''}>España</option><option value="Latam" ${user.region === 'Latam' ? 'selected' : ''}>Latam</option>`
+                                    }
                                 </select>
                             </div>
                         </div>
@@ -2248,49 +2471,392 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                 window.location.reload();
             },
 
-            async apiCreateClient(name, region) {
-                const res = await fetch('api/clients.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, region }) });
+            async apiCreateClient(name, countryId, logoSvg = '') {
+                const res = await fetch('api/clients.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, country_id: countryId, logo_svg: logoSvg || null }) });
                 if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
             },
             async apiDeleteClient(id) {
                 const res = await fetch('api/clients.php?id=' + id, { method: 'DELETE' });
                 if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
             },
-            async openClientManager() {
-                // Fetch fresh list including IDs
-                let clients = [];
-                try {
-                    const res = await fetch('api/clients.php');
-                    if (res.ok) clients = await res.json();
-                } catch (e) { console.error(e); }
 
-                const listHtml = clients.map(c => `
-                    <div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-1 border border-slate-700">
-                        <span class="text-white text-xs font-mono">${c.name} <span class="text-indigo-400 font-bold ml-1 text-[9px] uppercase">(${c.region || 'España'})</span></span>
-                        <button onclick="app.deleteClient(${c.id})" class="text-red-400 hover:text-red-300"><span class="material-icons-round text-sm">delete</span></button>
-                    </div>
-                `).join('');
+            async openRegionManager() {
+                await Promise.all([this.fetchRegions(), this.fetchClients()]);
+                const isLight = document.body.classList.contains('light-mode');
+
+                const buildTree = () => {
+                    let html = '<div class="text-left space-y-2">';
+                    html += `
+                        <div class="flex gap-2 mb-3">
+                            <input id="new-region-name" class="custom-field h-8 text-xs flex-1" placeholder="Nueva región...">
+                            <button onclick="app.createRegion()" class="bg-green-700 hover:bg-green-600 text-white px-3 rounded text-xs font-bold transition flex items-center gap-1"><span class="material-icons-round text-xs">add</span> Región</button>
+                        </div>`;
+                    for (const region of (this.regionsData || [])) {
+                        const flagHtml = region.flag_svg ? `<span class="mr-1">${region.flag_svg}</span>` : '<span class="mr-1">🌎</span>';
+                        html += `
+                        <div class="border border-slate-600 rounded-lg overflow-hidden">
+                            <div class="flex items-center justify-between p-2.5 bg-slate-800">
+                                <span class="flex items-center text-sm font-bold text-white">${flagHtml}${region.name}</span>
+                                <span class="flex items-center gap-0.5">
+                                    <button onclick="app.editRegion(${region.id})" class="text-blue-400 hover:text-blue-300 transition" title="Editar región y SVG"><span class="material-icons-round text-sm">edit</span></button>
+                                    <button onclick="app.deleteRegion(${region.id})" class="text-red-400 hover:text-red-300 transition" title="Eliminar región"><span class="material-icons-round text-sm">delete</span></button>
+                                </span>
+                            </div>
+                            <div class="bg-slate-900/30 p-2 space-y-2">
+                                <div class="flex gap-1.5 mb-2">
+                                    <input id="new-country-${region.id}" class="custom-field h-7 text-xs flex-1" placeholder="Nuevo país...">
+                                    <button onclick="app.createCountry(${region.id})" class="bg-blue-700 hover:bg-blue-600 text-white px-2 rounded text-xs font-bold transition">+ País</button>
+                                </div>`;
+                        for (const country of (region.countries || [])) {
+                            const countryBrands = (this.clientRecords || []).filter(c => String(c.country_id) === String(country.id));
+                            html += `
+                                <div class="border border-slate-700/60 rounded overflow-hidden">
+                                    <div class="flex items-center justify-between px-2.5 py-1.5 bg-slate-800/70">
+                                        <span class="text-xs font-bold text-slate-200">${country.flag_svg ? `<span style="display:inline-flex;align-items:center;width:18px;height:14px;overflow:hidden;margin-right:4px;flex-shrink:0;">${country.flag_svg}</span>` : ''}${country.name}</span>
+                                        <span class="flex items-center gap-0.5">
+                                            <button onclick="app.editCountry(${country.id})" class="text-blue-400 hover:text-blue-300 transition" title="Editar país y SVG"><span class="material-icons-round" style="font-size:14px">edit</span></button>
+                                            <button onclick="app.deleteCountry(${country.id})" class="text-red-400 hover:text-red-300 transition" title="Eliminar país"><span class="material-icons-round" style="font-size:14px">delete</span></button>
+                                        </span>
+                                    </div>
+                                    <div class="bg-slate-900/20 px-2.5 py-1.5 space-y-1">
+                                        <div class="flex gap-1.5 mb-1">
+                                            <input id="new-brand-${country.id}" class="custom-field h-6 text-xs flex-1" placeholder="Nueva marca...">
+                                            <button onclick="app.createBrand(${country.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 rounded text-xs font-bold transition">+ Marca</button>
+                                        </div>`;
+                            if (countryBrands.length === 0) {
+                                html += `<p class="text-slate-500 text-[10px] italic px-1">Sin marcas</p>`;
+                            } else {
+                                for (const brand of countryBrands) {
+                                    const logoThumb = brand.logo_svg
+                                        ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:18px;flex-shrink:0;overflow:hidden;">${brand.logo_svg}</span>`
+                                        : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${this.getColorForBrand ? this.getColorForBrand(brand.name) : '#6366f1'};"></span>`;
+                                    html += `
+                                        <div class="flex justify-between items-center py-0.5">
+                                            <span class="flex items-center gap-1.5 text-slate-300 text-xs font-mono">${logoThumb}${brand.name}</span>
+                                            <span class="flex items-center gap-0.5">
+                                                <button onclick="app.editBrand(${brand.id})" class="text-blue-400 hover:text-blue-300 transition" title="Editar icono SVG"><span class="material-icons-round" style="font-size:14px">edit</span></button>
+                                                <button onclick="app.deleteBrand(${brand.id})" class="text-red-400 hover:text-red-300 transition"><span class="material-icons-round" style="font-size:14px">delete</span></button>
+                                            </span>
+                                        </div>`;
+                                }
+                            }
+                            html += `</div></div>`;
+                        }
+                        if ((region.countries || []).length === 0) {
+                            html += `<p class="text-slate-500 text-[10px] italic px-1 mb-1">Sin países</p>`;
+                        }
+                        html += `</div></div>`;
+                    }
+                    const orphans = (this.clientRecords || []).filter(c => !c.country_id);
+                    if (orphans.length > 0) {
+                        html += `
+                        <div class="border border-yellow-700/40 rounded-lg overflow-hidden mt-2">
+                            <div class="p-2 bg-yellow-900/20"><span class="text-xs font-bold text-yellow-400">⚠ Marcas sin país asignado</span></div>
+                            <div class="bg-slate-900/20 px-2.5 py-1.5 space-y-1">`;
+                        for (const brand of orphans) {
+                            const logoThumb = brand.logo_svg
+                                ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:18px;flex-shrink:0;overflow:hidden;">${brand.logo_svg}</span>`
+                                : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${this.getColorForBrand ? this.getColorForBrand(brand.name) : '#6366f1'};"></span>`;
+                            html += `
+                                <div class="flex justify-between items-center py-0.5">
+                                    <span class="flex items-center gap-1.5 text-slate-300 text-xs font-mono">${logoThumb}${brand.name}</span>
+                                    <span class="flex items-center gap-0.5">
+                                        <button onclick="app.editBrand(${brand.id})" class="text-blue-400 hover:text-blue-300 transition" title="Editar icono SVG"><span class="material-icons-round" style="font-size:14px">edit</span></button>
+                                        <button onclick="app.deleteBrand(${brand.id})" class="text-red-400 hover:text-red-300 transition"><span class="material-icons-round" style="font-size:14px">delete</span></button>
+                                    </span>
+                                </div>`;
+                        }
+                        html += `</div></div>`;
+                    }
+                    html += '</div>';
+                    return html;
+                };
 
                 Swal.fire({
-                    title: 'Gestión de Clientes (Marcas)',
-                    html: `
-                        <div class="text-left">
-                            <div class="flex gap-2 mb-4">
-                                <input id="new-client" class="custom-field h-8 text-xs flex-1" placeholder="Nombre nueva marca...">
-                                <select id="new-client-region" class="custom-field h-8 text-xs w-28">
-                                    <option value="España">España</option>
-                                    <option value="Latam">Latam</option>
-                                </select>
-                                <button onclick="app.createClient()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-bold">Crear</button>
-                            </div>
-                            <div class="max-h-60 overflow-y-auto pr-2">
-                                ${listHtml}
-                            </div>
-                        </div>
-                    `,
-                    background: '#1e293b', color: '#fff', showConfirmButton: false, showCloseButton: true
+                    title: 'Gestión de Regiones y Marcas',
+                    html: buildTree(),
+                    background: isLight ? '#fff' : '#1e293b',
+                    color: isLight ? '#1e293b' : '#fff',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    width: 540,
+                    customClass: { popup: 'text-left' }
                 });
             },
+
+            async editRegion(id) {
+                const region = (this.regionsData || []).find(r => r.id == id);
+                if (!region) return;
+                const isLight = document.body.classList.contains('light-mode');
+                const currentSvg = (region.flag_svg || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const previewHtml = region.flag_svg
+                    ? `<div style="width:60px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${region.flag_svg}</div>`
+                    : '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
+                const { value: formValues, isConfirmed } = await Swal.fire({
+                    title: `Editar región: ${region.name}`,
+                    background: isLight ? '#fff' : '#1e293b',
+                    color: isLight ? '#1e293b' : '#fff',
+                    showCancelButton: true,
+                    confirmButtonText: 'Guardar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#475569',
+                    html: `
+                        <div style="text-align:left;">
+                            <div style="margin-bottom:12px;">
+                                <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Nombre</label>
+                                <input id="swal-region-name" class="swal2-input" style="width:100%;margin:0;box-sizing:border-box;" value="${region.name.replace(/"/g, '&quot;')}">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Icono SVG inline <span style="font-weight:400;color:#64748b;">(bandera, logo, etc.)</span></label>
+                                <textarea id="swal-region-svg" class="swal2-textarea" style="width:100%;margin:0;box-sizing:border-box;height:90px;font-family:monospace;font-size:11px;resize:vertical;" placeholder="&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 60 40&quot;&gt;...&lt;/svg&gt;">${currentSvg}</textarea>
+                                <div id="swal-region-preview" style="min-height:52px;display:flex;align-items:center;justify-content:center;margin-top:6px;padding:6px;border-radius:6px;background:rgba(255,255,255,0.07);">
+                                    ${previewHtml}
+                                </div>
+                            </div>
+                        </div>`,
+                    didOpen: () => {
+                        const ta = document.getElementById('swal-region-svg');
+                        const preview = document.getElementById('swal-region-preview');
+                        ta.addEventListener('input', () => {
+                            const val = ta.value.trim();
+                            if (val.toLowerCase().startsWith('<svg')) {
+                                preview.innerHTML = `<div style="width:80px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${val}</div>`;
+                            } else {
+                                preview.innerHTML = '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const name = (document.getElementById('swal-region-name')?.value || '').trim();
+                        if (!name) { Swal.showValidationMessage('El nombre es obligatorio'); return false; }
+                        const flagSvg = (document.getElementById('swal-region-svg')?.value || '').trim();
+                        return { name, flagSvg };
+                    }
+                });
+                if (!isConfirmed || !formValues) return;
+                try {
+                    const res = await fetch('api/regions.php?id=' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: formValues.name, flag_svg: formValues.flagSvg || null })
+                    });
+                    if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                    await Promise.all([this.fetchRegions(), this.fetchClients()]);
+                    this.renderFilters();
+                    Swal.close();
+                    await this.openRegionManager();
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
+
+            async editCountry(id) {
+                // Buscar el país en regionsData
+                let country = null;
+                for (const r of (this.regionsData || [])) {
+                    const c = (r.countries || []).find(c => c.id == id);
+                    if (c) { country = c; break; }
+                }
+                if (!country) return;
+                const isLight = document.body.classList.contains('light-mode');
+                const currentSvg = (country.flag_svg || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const previewHtml = country.flag_svg
+                    ? `<div style="width:60px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${country.flag_svg}</div>`
+                    : '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
+                const { value: formValues, isConfirmed } = await Swal.fire({
+                    title: `Editar país: ${country.name}`,
+                    background: isLight ? '#fff' : '#1e293b',
+                    color: isLight ? '#1e293b' : '#fff',
+                    showCancelButton: true,
+                    confirmButtonText: 'Guardar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#475569',
+                    html: `
+                        <div style="text-align:left;">
+                            <div style="margin-bottom:12px;">
+                                <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Nombre</label>
+                                <input id="swal-country-name" class="swal2-input" style="width:100%;margin:0;box-sizing:border-box;" value="${country.name.replace(/"/g, '&quot;')}">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Icono SVG inline <span style="font-weight:400;color:#64748b;">(bandera, logo, etc.)</span></label>
+                                <textarea id="swal-country-svg" class="swal2-textarea" style="width:100%;margin:0;box-sizing:border-box;height:90px;font-family:monospace;font-size:11px;resize:vertical;" placeholder="&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 60 40&quot;&gt;...&lt;/svg&gt;">${currentSvg}</textarea>
+                                <div id="swal-country-preview" style="min-height:52px;display:flex;align-items:center;justify-content:center;margin-top:6px;padding:6px;border-radius:6px;background:rgba(255,255,255,0.07);">
+                                    ${previewHtml}
+                                </div>
+                            </div>
+                        </div>`,
+                    didOpen: () => {
+                        const ta = document.getElementById('swal-country-svg');
+                        const preview = document.getElementById('swal-country-preview');
+                        ta.addEventListener('input', () => {
+                            const val = ta.value.trim();
+                            if (val.toLowerCase().startsWith('<svg')) {
+                                preview.innerHTML = `<div style="width:80px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${val}</div>`;
+                            } else {
+                                preview.innerHTML = '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const name = (document.getElementById('swal-country-name')?.value || '').trim();
+                        if (!name) { Swal.showValidationMessage('El nombre es obligatorio'); return false; }
+                        const flagSvg = (document.getElementById('swal-country-svg')?.value || '').trim();
+                        return { name, flagSvg };
+                    }
+                });
+                if (!isConfirmed || !formValues) return;
+                try {
+                    const res = await fetch('api/countries.php?id=' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: formValues.name, flag_svg: formValues.flagSvg || null })
+                    });
+                    if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                    await Promise.all([this.fetchRegions(), this.fetchClients()]);
+                    this.renderFilters();
+                    Swal.close();
+                    await this.openRegionManager();
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
+
+            async createRegion() {
+                const name = (document.getElementById('new-region-name')?.value || '').trim();
+                if (!name) return;
+                try {
+                    const res = await fetch('api/regions.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+                    if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                    Swal.close();
+                    await this.openRegionManager();
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
+
+            async deleteRegion(id) {
+                const result = await Swal.fire({ title: '¿Eliminar región?', text: 'Solo se puede si no tiene países.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#475569', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar', background: '#1e293b', color: '#fff' });
+                if (result.isConfirmed) {
+                    try {
+                        const res = await fetch('api/regions.php?id=' + id, { method: 'DELETE' });
+                        if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                        Swal.close();
+                        await this.openRegionManager();
+                    } catch (e) { Swal.fire('Error', e.message, 'error'); }
+                }
+            },
+
+            async createCountry(regionId) {
+                const name = (document.getElementById('new-country-' + regionId)?.value || '').trim();
+                if (!name) return;
+                try {
+                    const res = await fetch('api/countries.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, region_id: regionId }) });
+                    if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                    Swal.close();
+                    await this.openRegionManager();
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
+
+            async deleteCountry(id) {
+                const result = await Swal.fire({ title: '¿Eliminar país?', text: 'Solo se puede si no tiene marcas asignadas.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#475569', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar', background: '#1e293b', color: '#fff' });
+                if (result.isConfirmed) {
+                    try {
+                        const res = await fetch('api/countries.php?id=' + id, { method: 'DELETE' });
+                        if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                        Swal.close();
+                        await this.openRegionManager();
+                    } catch (e) { Swal.fire('Error', e.message, 'error'); }
+                }
+            },
+
+            async createBrand(countryId) {
+                const name = (document.getElementById('new-brand-' + countryId)?.value || '').trim();
+                if (!name) return;
+                try {
+                    await this.apiCreateClient(name, countryId);
+                    await Promise.all([this.fetchClients(), this.fetchRegions()]);
+                    this.renderFilters();
+                    Swal.close();
+                    await this.openRegionManager();
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
+
+            async deleteBrand(id) {
+                const result = await Swal.fire({ title: '¿Eliminar esta marca?', text: 'Esta acción no se puede deshacer.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#475569', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar', background: '#1e293b', color: '#fff' });
+                if (result.isConfirmed) {
+                    try {
+                        await this.apiDeleteClient(id);
+                        await this.fetchClients();
+                        this.renderFilters();
+                        Swal.close();
+                        await this.openRegionManager();
+                    } catch (e) { Swal.fire('Error', e.message, 'error'); }
+                }
+            },
+
+            async editBrand(id) {
+                const brand = (this.clientRecords || []).find(b => b.id == id);
+                if (!brand) return;
+                const isLight = document.body.classList.contains('light-mode');
+                const currentSvg = (brand.logo_svg || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const previewHtml = brand.logo_svg
+                    ? `<div style="width:48px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${brand.logo_svg}</div>`
+                    : '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
+                const { value: formValues, isConfirmed } = await Swal.fire({
+                    title: `Editar: ${brand.name}`,
+                    background: isLight ? '#fff' : '#1e293b',
+                    color: isLight ? '#1e293b' : '#fff',
+                    showCancelButton: true,
+                    confirmButtonText: 'Guardar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#475569',
+                    html: `
+                        <div class="text-left space-y-3" style="text-align:left;">
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Nombre</label>
+                                <input id="swal-brand-name" class="swal2-input" style="width:100%;margin:0 0 0 0;box-sizing:border-box;" value="${brand.name.replace(/"/g, '&quot;')}">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Icono SVG inline <span style="font-weight:400;color:#64748b;">(pega el código &lt;svg ...&gt;...&lt;/svg&gt;)</span></label>
+                                <textarea id="swal-brand-svg" class="swal2-textarea" style="width:100%;margin:0;box-sizing:border-box;height:90px;font-family:monospace;font-size:11px;resize:vertical;" placeholder="&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 40&quot;&gt;...&lt;/svg&gt;">${currentSvg}</textarea>
+                                <div id="swal-svg-preview" style="min-height:52px;display:flex;align-items:center;justify-content:center;margin-top:6px;padding:6px;border-radius:6px;background:rgba(255,255,255,0.07);">
+                                    ${previewHtml}
+                                </div>
+                            </div>
+                        </div>`,
+                    didOpen: () => {
+                        const ta = document.getElementById('swal-brand-svg');
+                        const preview = document.getElementById('swal-svg-preview');
+                        ta.addEventListener('input', () => {
+                            const val = ta.value.trim();
+                            if (val.toLowerCase().startsWith('<svg')) {
+                                preview.innerHTML = `<div style="width:80px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${val}</div>`;
+                            } else {
+                                preview.innerHTML = '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
+                            }
+                        });
+                    },
+                    preConfirm: () => {
+                        const name = (document.getElementById('swal-brand-name')?.value || '').trim();
+                        if (!name) { Swal.showValidationMessage('El nombre es obligatorio'); return false; }
+                        const logoSvg = (document.getElementById('swal-brand-svg')?.value || '').trim();
+                        return { name, logoSvg };
+                    }
+                });
+                if (!isConfirmed || !formValues) return;
+                try {
+                    const res = await fetch('api/clients.php?id=' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: formValues.name, country_id: brand.country_id, logo_svg: formValues.logoSvg || null })
+                    });
+                    if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                    await Promise.all([this.fetchClients(), this.fetchRegions()]);
+                    this.renderFilters();
+                    Swal.close();
+                    await this.openRegionManager();
+                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+            },
+
+            // Alias for backward compatibility
+            openClientManager() { return this.openRegionManager(); },
 
 
 
@@ -2600,36 +3166,13 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
             },
 
             async createClient() {
-                const name = document.getElementById('new-client').value.trim();
-                const region = document.getElementById('new-client-region').value;
-                if (!name) return;
-                try {
-                    await this.apiCreateClient(name, region);
-                    await this.fetchClients();
-                    this.openClientManager();
-                } catch (e) { Swal.fire('Error', e.message, 'error'); }
+                // Legacy: redirect to new brand manager
+                return this.openRegionManager();
             },
 
             async deleteClient(id) {
-                const result = await Swal.fire({
-                    title: '¿Eliminar esta marca?',
-                    text: 'Esta acción no se puede deshacer.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#475569',
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar',
-                    background: '#1e293b',
-                    color: '#fff'
-                });
-                if (result.isConfirmed) {
-                    try {
-                        await this.apiDeleteClient(id);
-                        await this.fetchClients();
-                        this.openClientManager();
-                    } catch (e) { Swal.fire('Error', e.message, 'error'); }
-                }
+                // Legacy: use deleteBrand
+                return this.deleteBrand(id);
             },
 
             showProfile() {
@@ -2663,7 +3206,8 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                              ${this.user.role === 'admin' ? `
                             <div class="mt-4 pt-4 border-t border-slate-700 space-y-2">
                                 <button onclick="Swal.close(); app.openAdminPanel()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold transition">Administrar Usuarios</button>
-                                <button onclick="Swal.close(); app.openClientManager()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold transition">Gestionar Clientes</button>
+                                <button onclick="Swal.close(); app.openRegionManager()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold transition">Gestionar Regiones y Marcas</button>
+                                ${(() => { const n = app.db.filter(u => !u.client_id && u.marca).length; return n > 0 ? `<button onclick="Swal.close(); app.runClientMigration()" class="w-full bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-100 py-2 rounded font-bold transition border border-indigo-500/30">🔗 Vincular registros sin marca asignada <span style="background:#6366f1;color:#fff;font-size:11px;padding:1px 6px;border-radius:9999px;margin-left:4px">${n}</span></button>` : ''; })()}
                                 <button onclick="Swal.close(); app.resetData()" class="w-full bg-red-900/40 hover:bg-red-900/60 text-red-100 py-2 rounded font-bold transition border border-red-500/30">Reset Completo Sistema</button>
                             </div>
                             ` : ''}

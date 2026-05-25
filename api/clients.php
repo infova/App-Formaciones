@@ -8,7 +8,14 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query("SELECT * FROM clients");
+        $stmt = $pdo->query("
+            SELECT c.id, c.name, c.region, c.country_id, c.logo_svg,
+                   co.name AS country_name, r.id AS region_id, r.name AS region_name
+            FROM clients c
+            LEFT JOIN countries co ON co.id = c.country_id
+            LEFT JOIN regions r ON r.id = co.region_id
+            ORDER BY c.name
+        ");
         echo json_encode($stmt->fetchAll());
         break;
 
@@ -19,14 +26,22 @@ switch ($method) {
             echo json_encode(['error' => 'Nombre obligatorio']);
             exit;
         }
+        $countryId = !empty($data['country_id']) ? (int)$data['country_id'] : null;
+        $region = $data['region'] ?? 'España';
+        // Derive region from country if country_id provided
+        if ($countryId) {
+            $r = $pdo->prepare("SELECT r.name FROM countries co JOIN regions r ON r.id = co.region_id WHERE co.id = ?");
+            $r->execute([$countryId]);
+            $region = $r->fetchColumn() ?: $region;
+        }
         try {
-            $stmt = $pdo->prepare("INSERT INTO clients (name, region) VALUES (?, ?)");
-            $stmt->execute([$data['name'], $data['region'] ?? 'España']);
-            echo json_encode(['success' => true]);
+            $stmt = $pdo->prepare("INSERT INTO clients (name, region, country_id, logo_svg) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null]);
+            echo json_encode(['success' => true, 'id' => (int)$pdo->lastInsertId()]);
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) {
                 http_response_code(400);
-                echo json_encode(['error' => 'El cliente ya existe']);
+                echo json_encode(['error' => 'Esta marca ya existe en este país']);
             } else {
                 throw $e;
             }
@@ -34,10 +49,17 @@ switch ($method) {
         break;
 
     case 'PUT':
-        $id = $_GET['id'] ?? null;
+        $id = (int)($_GET['id'] ?? 0);
         $data = json_decode(file_get_contents('php://input'), true);
-        $stmt = $pdo->prepare("UPDATE clients SET name = ?, region = ? WHERE id = ?");
-        $stmt->execute([$data['name'], $data['region'] ?? 'España', $id]);
+        $countryId = !empty($data['country_id']) ? (int)$data['country_id'] : null;
+        $region = $data['region'] ?? 'España';
+        if ($countryId) {
+            $r = $pdo->prepare("SELECT r.name FROM countries co JOIN regions r ON r.id = co.region_id WHERE co.id = ?");
+            $r->execute([$countryId]);
+            $region = $r->fetchColumn() ?: $region;
+        }
+        $stmt = $pdo->prepare("UPDATE clients SET name = ?, region = ?, country_id = ?, logo_svg = ? WHERE id = ?");
+        $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $id]);
         echo json_encode(['success' => true]);
         break;
 

@@ -21,6 +21,27 @@ switch ($method) {
     case 'POST':
         $payload = json_decode(file_get_contents('php://input'), true);
 
+        // Migración masiva: asigna client_id a registros por nombre de marca
+        if (isset($_GET['migrate_clients']) && $_GET['migrate_clients'] === '1') {
+            $assignments = $payload ?? [];
+            $updated = 0;
+            $sel = $pdo->prepare("SELECT id, data FROM records WHERE marca = ? AND (client_id IS NULL OR client_id = 0)");
+            $upd = $pdo->prepare("UPDATE records SET client_id = ?, data = ? WHERE id = ?");
+            foreach ($assignments as $a) {
+                if (empty($a['marca']) || empty($a['client_id'])) continue;
+                $clientId = (int)$a['client_id'];
+                $sel->execute([$a['marca']]);
+                foreach ($sel->fetchAll() as $row) {
+                    $data = json_decode($row['data'], true) ?? [];
+                    $data['client_id'] = $clientId;
+                    $upd->execute([$clientId, json_encode($data), $row['id']]);
+                    $updated++;
+                }
+            }
+            echo json_encode(['success' => true, 'updated' => $updated]);
+            break;
+        }
+
         // Handle Bulk Import
         if (isset($_GET['bulk']) && $_GET['bulk'] === 'true') {
             $type = $payload['type'] ?? 'all';
@@ -95,7 +116,7 @@ switch ($method) {
 
         // Standard Single Record POST
         $record = $payload;
-        $stmt = $pdo->prepare("INSERT INTO records (id, fechaAlta, marca, nombre, apellidos, email, telefono, concesionario, tipoAcceso, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO records (id, fechaAlta, marca, nombre, apellidos, email, telefono, concesionario, tipoAcceso, data, client_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $record['id'] ?? null,
             $record['fechaAlta'] ?? null,
@@ -106,7 +127,8 @@ switch ($method) {
             $record['telefono'] ?? '',
             $record['concesionario'] ?? null,
             $record['tipoAcceso'] ?? null,
-            json_encode($record)
+            json_encode($record),
+            isset($record['client_id']) ? (int)$record['client_id'] : null
         ]);
         echo json_encode(['success' => true]);
         break;
@@ -119,7 +141,7 @@ switch ($method) {
             exit;
         }
         $record = json_decode(file_get_contents('php://input'), true);
-        $stmt = $pdo->prepare("UPDATE records SET fechaAlta=?, marca=?, nombre=?, apellidos=?, email=?, telefono=?, concesionario=?, tipoAcceso=?, data=? WHERE id=?");
+        $stmt = $pdo->prepare("UPDATE records SET fechaAlta=?, marca=?, nombre=?, apellidos=?, email=?, telefono=?, concesionario=?, tipoAcceso=?, data=?, client_id=? WHERE id=?");
         $stmt->execute([
             $record['fechaAlta'] ?? null,
             $record['marca'] ?? null,
@@ -130,6 +152,7 @@ switch ($method) {
             $record['concesionario'] ?? null,
             $record['tipoAcceso'] ?? null,
             json_encode($record),
+            isset($record['client_id']) ? (int)$record['client_id'] : null,
             $id
         ]);
         echo json_encode(['success' => true]);
