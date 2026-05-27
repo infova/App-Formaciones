@@ -163,7 +163,7 @@ input[type="datetime-local"] {
 }
 
 .kanban-card {
-    transition: transform 0.1s;
+    transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
     border-left-width: 4px;
     cursor: grab;
     background: rgba(20, 30, 50, 0.78);
@@ -532,7 +532,6 @@ body.light-mode .kanban-header {
     color: #1e293b !important;
 }
 body.light-mode .kanban-card {
-    background: rgba(255,255,255,0.72) !important;
     backdrop-filter: blur(4px) !important;
     -webkit-backdrop-filter: blur(4px) !important;
     border-color: rgba(0,0,0,0.05) !important;
@@ -567,11 +566,10 @@ body.light-mode ::-webkit-scrollbar-thumb:hover { background: #64748b; }
     border-left-color: #6366f1;
 }
 body.light-mode .agenda-item {
-    background: rgba(238, 242, 255, 0.8) !important;
-    border: 1px solid rgba(99, 102, 241, 0.18) !important;
-    border-left: 3px solid #6366f1 !important;
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 body.light-mode .agenda-item:hover {
-    background: rgba(224, 231, 255, 0.9) !important;
-    border-left-color: #4f46e5 !important;
+    filter: brightness(0.96);
 }

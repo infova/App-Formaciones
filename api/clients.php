@@ -6,10 +6,16 @@ $pdo = getPDO();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Auto-migrate: add brand_color column if not exists
+try {
+    $pdo->exec("ALTER TABLE clients ADD COLUMN brand_color VARCHAR(20) NULL");
+} catch (PDOException $e) { /* already exists */
+}
+
 switch ($method) {
     case 'GET':
         $stmt = $pdo->query("
-            SELECT c.id, c.name, c.region, c.country_id, c.logo_svg,
+            SELECT c.id, c.name, c.region, c.country_id, c.logo_svg, c.brand_color,
                    co.name AS country_name, r.id AS region_id, r.name AS region_name
             FROM clients c
             LEFT JOIN countries co ON co.id = c.country_id
@@ -35,8 +41,8 @@ switch ($method) {
             $region = $r->fetchColumn() ?: $region;
         }
         try {
-            $stmt = $pdo->prepare("INSERT INTO clients (name, region, country_id, logo_svg) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null]);
+            $stmt = $pdo->prepare("INSERT INTO clients (name, region, country_id, logo_svg, brand_color) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $data['brand_color'] ?? null]);
             echo json_encode(['success' => true, 'id' => (int)$pdo->lastInsertId()]);
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) {
@@ -58,8 +64,8 @@ switch ($method) {
             $r->execute([$countryId]);
             $region = $r->fetchColumn() ?: $region;
         }
-        $stmt = $pdo->prepare("UPDATE clients SET name = ?, region = ?, country_id = ?, logo_svg = ? WHERE id = ?");
-        $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $id]);
+        $stmt = $pdo->prepare("UPDATE clients SET name = ?, region = ?, country_id = ?, logo_svg = ?, brand_color = ? WHERE id = ?");
+        $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $data['brand_color'] ?? null, $id]);
         echo json_encode(['success' => true]);
         break;
 

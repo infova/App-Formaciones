@@ -6,9 +6,15 @@ $pdo = getPDO();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Auto-migrate: add profile_color column if not exists
+try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN profile_color VARCHAR(150) NULL");
+} catch (PDOException $e) { /* already exists */
+}
+
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query("SELECT id, username, role, brands, region, lastLogin FROM users");
+        $stmt = $pdo->query("SELECT id, username, role, brands, region, lastLogin, profile_color FROM users");
         echo json_encode($stmt->fetchAll());
         break;
 
@@ -43,13 +49,14 @@ switch ($method) {
     case 'PUT':
         $id = $_GET['id'] ?? null;
         $data = json_decode(file_get_contents('php://input'), true);
+        $profileColor = isset($data['profile_color']) ? $data['profile_color'] : null;
         if (!empty($data['password'])) {
             $hash = password_hash($data['password'], PASSWORD_BCRYPT);
-            $stmt = $pdo->prepare("UPDATE users SET password = ?, role = ?, brands = ?, region = ? WHERE id = ?");
-            $stmt->execute([$hash, $data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $id]);
+            $stmt = $pdo->prepare("UPDATE users SET password = ?, role = ?, brands = ?, region = ?, profile_color = ? WHERE id = ?");
+            $stmt->execute([$hash, $data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $profileColor, $id]);
         } else {
-            $stmt = $pdo->prepare("UPDATE users SET role = ?, brands = ?, region = ? WHERE id = ?");
-            $stmt->execute([$data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $id]);
+            $stmt = $pdo->prepare("UPDATE users SET role = ?, brands = ?, region = ?, profile_color = ? WHERE id = ?");
+            $stmt->execute([$data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $profileColor, $id]);
         }
         echo json_encode(['success' => true]);
         break;

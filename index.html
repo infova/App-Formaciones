@@ -705,8 +705,9 @@
             isoToInput(iso) { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); },
             getTimeFromDate(iso) { if (!iso || !iso.includes('T')) return '--:--'; return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); },
             getDaysSince(dateStr) {
-                if (!dateStr) return 0;
-const start = new Date(dateStr);
+                if (!dateStr) return null;
+                const start = new Date(dateStr);
+                if (isNaN(start.getTime())) return null;
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 start.setHours(0, 0, 0, 0);
@@ -993,6 +994,8 @@ const start = new Date(dateStr);
                 const icon = document.getElementById('theme-icon');
                 if (icon) icon.textContent = isLight ? 'dark_mode' : 'light_mode';
                 localStorage.setItem('app_theme', isLight ? 'light' : 'dark');
+                if (!document.getElementById('view-kanban').classList.contains('hidden')) this.renderKanban();
+                if (!document.getElementById('view-dashboard').classList.contains('hidden')) this.renderDashboard();
             },
             toggleDropdown(event, region) {
                 event.stopPropagation();
@@ -1210,16 +1213,42 @@ const start = new Date(dateStr);
                     : this.clients;
 
                 if (this.chartBrands) this.chartBrands.destroy();
+                const brandChartColors = brandsForChart.map(c => this.getColorForBrand(c));
                 this.chartBrands = new Chart(document.getElementById('chart-brands'), {
-                    type: 'bar', data: { labels: brandsForChart, datasets: [{ label: 'Pendientes', data: brandsForChart.map(c => data.filter(u => u.marca === c && u.reqFormacion && u.formacion.status !== 'Realizada').length), backgroundColor: '#6366f1', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true }, x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } } }
+                    type: 'bar',
+                    data: {
+                        labels: brandsForChart,
+                        datasets: [{
+                            label: 'Pendientes',
+                            data: brandsForChart.map(c => data.filter(u => u.marca === c && u.reqFormacion && u.formacion.status !== 'Realizada').length),
+                            backgroundColor: brandChartColors.map(c => this.hexToRgba(c, 0.72)),
+                            borderColor: brandChartColors,
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } }, beginAtZero: true },
+                            x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } }
+                        }
+                    }
                 });
 
                 const sch = data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date));
+                const isLightAgenda = document.body.classList.contains('light-mode');
                 document.getElementById('list-agenda').innerHTML = sch.map(u => {
                     const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
+                    const brandColor = this.getColorForBrand(u.marca);
+                    const gradientBg = isLightAgenda
+                        ? `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.18)} 0%, rgba(255,255,255,0.88) 45%)`
+                        : `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.25)} 0%, rgba(20,30,55,0.82) 45%)`;
                     return `
-                    <div class="flex items-center gap-2 p-1.5 agenda-item rounded text-[10px] relative group">
-                        <div class="bg-indigo-600 text-white px-2 py-1 rounded font-bold text-center leading-none">
+                    <div class="flex items-center gap-2 p-1.5 agenda-item rounded text-[10px] relative group" style="background: ${gradientBg}; border-left-color: ${brandColor};">
+                        <div class="text-white px-2 py-1 rounded font-bold text-center leading-none" style="background: ${brandColor};">
                             ${new Date(u.formacion.date).getDate()}<br>
                             <small>${new Date(u.formacion.date).toLocaleString('es', { month: 'short' }).toUpperCase()}</small>
                         </div>
@@ -1423,6 +1452,11 @@ const start = new Date(dateStr);
 
             getColorForString(str) {
                 if (!str) return '#64748b';
+                // Check adminUsers for stored profile_color
+                if (this.adminUsers) {
+                    const appUser = this.adminUsers.find(u => u.username === str.trim().toLowerCase() || u.username === str.trim());
+                    if (appUser && appUser.profile_color) return appUser.profile_color;
+                }
                 const s = str.trim().toLowerCase();
                 if (s === 'ialegre' || s === 'iñaki alegre' || (s.includes('iñaki') && s.includes('alegre'))) return 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #0f172a; text-shadow: none';
                 if (s === 'scristobal' || s === 'sergio cristobal' || (s.includes('sergio') && s.includes('cristobal'))) return 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: #ffffff; text-shadow: none';
@@ -1432,6 +1466,10 @@ const start = new Date(dateStr);
             },
 
             getColorForBrand(brand) {
+                if (this.clientRecords) {
+                    const rec = this.clientRecords.find(c => c.name === brand);
+                    if (rec && rec.brand_color) return rec.brand_color;
+                }
                 const palette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#a855f7'];
                 if (brand === 'Kia') return '#ef4444'; if (brand === 'Hyundai') return '#3b82f6'; if (brand === 'Kia Canarias') return '#f97316';
                 let h = 0; for (let i = 0; i < brand.length; i++) h = brand.charCodeAt(i) + ((h << 5) - h);
@@ -1500,7 +1538,7 @@ const start = new Date(dateStr);
                     <td class="p-3"><input type="checkbox" class="it-row-checkbox w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0" value="${u.id}" onchange="app.updateBulkActionVisibility()"></td>
                     <td class="p-3"><b>${u.nombre} ${u.apellidos}</b><br><small class="text-slate-500 font-mono">${u.tabletSN || u.serial || 'S/N'}</small></td>
                     <td class="p-3 text-xs text-amber-500 uppercase">${u.concesionario}</td>
-                    <td class="p-3 text-center"><div class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-indigo-500/50 text-indigo-400 font-bold text-xs">${this.getDaysSince(u.fechaAlta)}</div></td>
+                    <td class="p-3 text-center"><div class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-indigo-500/50 text-indigo-400 font-bold text-xs">${this.getDaysSince(u.fechaAlta) ?? '-'}</div></td>
                     <td class="p-3">${u.fechaConfig ? `✅ ${u.fechaConfig}` : '<span class="text-red-400 font-bold uppercase">Pendiente</span>'}</td>
                     <td class="p-3 text-xs text-slate-400 italic">${u.itComment || ''}</td>
                     <td class="p-3 text-right flex justify-end gap-2 items-center">
@@ -1536,7 +1574,7 @@ const start = new Date(dateStr);
                     let csv = "\uFEFFUsuario;Concesionario;Días Alta;S_N_Tablet;Estado;Comentario\n";
                     data.forEach(u => {
                         const obs = (u.itComment || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
-                        csv += `${u.nombre} ${u.apellidos};${u.concesionario};${this.getDaysSince(u.fechaAlta)};${u.tabletSN || u.serial || ''};${u.fechaConfig || 'Pendiente'};${obs}\n`;
+                        csv += `${u.nombre} ${u.apellidos};${u.concesionario};${this.getDaysSince(u.fechaAlta) ?? '-'};${u.tabletSN || u.serial || ''};${u.fechaConfig || 'Pendiente'};${obs}\n`;
                     });
                     const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); l.download = "Export_Config_iPad.csv"; l.click();
                 } catch (e) { Swal.fire('Error CSV', e.message, 'error'); }
@@ -1707,9 +1745,13 @@ const start = new Date(dateStr);
                         const isNoRealizada = s === 'No Realizada';
 
                         const card = document.createElement('div');
-                        let cardClass = `kanban-card p-3 mb-2 rounded border border-slate-700 shadow-md ${u.marca === 'Kia' ? 'border-l-red-500' : (u.marca === 'Hyundai' ? 'border-l-blue-900' : 'border-l-indigo-500')}`;
-
-                        card.className = cardClass;
+                        const brandColor = this.getColorForBrand(u.marca);
+                        card.className = 'kanban-card p-3 mb-2 rounded-lg border border-slate-700/60 shadow-md';
+                        const isLight = document.body.classList.contains('light-mode');
+                        card.style.borderLeftColor = brandColor;
+                        card.style.background = isLight
+                            ? `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.18)} 0%, rgba(255,255,255,0.88) 45%)`
+                            : `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.25)} 0%, rgba(14,22,40,0.82) 45%)`;
                         card.setAttribute('data-id', u.id);
 
                         const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
@@ -1742,7 +1784,7 @@ const start = new Date(dateStr);
                                         <button onclick="event.stopPropagation(); app.sendEmail('${u.id}')" class="text-slate-400 hover:text-indigo-400 transition" title="Enviar Propuesta Formación"><span class="material-icons-round text-sm">mail</span></button>
                                         <button onclick="app.deleteUser('${u.id}')" class="text-slate-400 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
                                     </div>
-                                    <div class="inline-flex items-center justify-center px-1.5 py-0.5 rounded border border-indigo-500/40 text-[9px] font-bold text-indigo-300 bg-indigo-500/10 shadow-sm" title="Días desde el alta">${this.getDaysSince(u.fechaAlta)}d</div>
+                                    <div class="inline-flex items-center justify-center px-1.5 py-0.5 rounded border border-indigo-500/40 text-[9px] font-bold text-indigo-300 bg-indigo-500/10 shadow-sm" title="Días desde el alta">${this.getDaysSince(u.fechaAlta) != null ? this.getDaysSince(u.fechaAlta) + 'd' : '-'}</div>
                                     <div class="text-[10px] font-semibold text-slate-300 antialiased tracking-tight">${this.formatDateTimeEU(u.formacion.date || u.formacion.dateCompleted)}</div>
                                 </div>
                                 ${ (s === 'Confirmada' || s === 'Convocada') ? `<div class="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg text-white uppercase tracking-tighter" style="background: ${this.getColorForString(assignee)}" title="Asignado por: ${assignee}">${this.getUserInitials(assignee)}</div>` : ''}
@@ -1807,8 +1849,22 @@ const start = new Date(dateStr);
                     u.formacion.confirmedBy = null;
                 }
 
+                const formacionBackup = JSON.parse(JSON.stringify(u.formacion));
                 if (newStatus === 'Realizada') u.formacion.dateCompleted = new Date().toISOString().split('T')[0];
-                u.formacion.status = newStatus; await app.apiUpdate(u); app.renderAll();
+                u.formacion.status = newStatus;
+                try {
+                    await app.apiUpdate(u);
+                    app.renderAll();
+                } catch (e) {
+                    u.formacion = formacionBackup;
+                    if (e.message && e.message.includes('no encontrado')) {
+                        // Registro fantasma: resincronizar datos desde el servidor
+                        await app.fetchData();
+                    } else {
+                        app.renderAll();
+                    }
+                    Swal.fire({ title: 'Error al guardar', text: e.message || 'No se pudo guardar el cambio de estado. Inténtalo de nuevo.', icon: 'error', background: '#1e293b', color: '#fff', confirmButtonColor: '#6366f1' });
+                }
             },
 
             async openUserModal(id = null) {
@@ -1907,7 +1963,25 @@ const start = new Date(dateStr);
                         return { id: idVal, fechaAlta: document.getElementById('sw-date').value, year: document.getElementById('sw-year').value, marca: _bRec?.name || _bId, client_id: _bId ? parseInt(_bId) : null, nombre: document.getElementById('sw-nom').value, apellidos: document.getElementById('sw-ape').value, telefono: document.getElementById('sw-tel').value, email: document.getElementById('sw-ema').value, concesionario: document.getElementById('sw-dea').value, tipoAcceso: document.getElementById('sw-type').value, usuarioAnterior: document.getElementById('sw-prev').value, tabletSN: document.getElementById('sw-serial').value, reqFormacion: document.getElementById('sw-req').checked, reqConfig: document.getElementById('sw-req-config').checked, fechaConfig: user?.fechaConfig || '', formacion: user?.formacion || { status: 'Pendiente', date: '' }, observaciones: document.getElementById('sw-obs').value }
                     }
                 });
-                if (form) { if (id) { const i = this.db.findIndex(u => u.id == id); this.db[i] = form; await this.apiUpdate(form); } else { this.db.push(form); await this.apiCreate(form); } this.renderAll(); }
+                if (form) {
+                    if (id) {
+                        const i = this.db.findIndex(u => u.id == id);
+                        this.db[i] = form;
+                        try {
+                            await this.apiUpdate(form);
+                        } catch (e) {
+                            if (e.message && e.message.includes('no encontrado')) {
+                                await this.fetchData();
+                            }
+                            Swal.fire({ title: 'Error al guardar', text: e.message || 'No se pudo guardar los cambios.', icon: 'error', background: '#1e293b', color: '#fff', confirmButtonColor: '#6366f1' });
+                            return;
+                        }
+                    } else {
+                        this.db.push(form);
+                        await this.apiCreate(form);
+                    }
+                    this.renderAll();
+                }
             },
 
             async setConfig(id) {
@@ -1966,7 +2040,12 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                 await fetch('api/records.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) });
             },
             async apiUpdate(record) {
-                await fetch('api/records.php?id=' + record.id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) });
+                const res = await fetch('api/records.php?id=' + record.id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) });
+                if (!res.ok) {
+                    let d = {};
+                    try { d = await res.json(); } catch(e) {}
+                    throw new Error(d.error || `Error HTTP ${res.status}`);
+                }
             },
             async apiDelete(id) {
                 await fetch('api/records.php?id=' + id, { method: 'DELETE' });
@@ -2339,9 +2418,17 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                     ? this.regionsData.map(r => `<option value="${r.name}">${r.name}</option>`).join('')
                     : '<option value="España">España</option><option value="Latam">Latam</option>';
 
-                const tableRows = this.adminUsers.map(u => `
+                const tableRows = this.adminUsers.map(u => {
+                    const badgeColor = u.profile_color || this.getColorForString(u.username);
+                    const initials = this.getUserInitials(u.username);
+                    return `
                     <tr class="border-b border-slate-700">
-                        <td class="p-2 text-xs font-mono text-slate-400">${u.username}</td>
+                        <td class="p-2 text-xs font-mono text-slate-400">
+                            <div style="display:inline-flex;align-items:center;gap:6px;">
+                                <div style="width:22px;height:18px;border-radius:4px;background:${badgeColor};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0;">${initials}</div>
+                                ${u.username}
+                            </div>
+                        </td>
                         <td class="p-2 text-xs uppercase ${u.role === 'admin' ? 'text-indigo-400' : 'text-slate-300'}">${u.role}</td>
                         <td class="p-2 text-xs text-slate-300">${u.region || 'España'}</td>
                         <td class="p-2 text-xs text-slate-500">${u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never'}</td>
@@ -2349,8 +2436,8 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                             <button onclick="app.editUserAccount('${u.id}')" class="text-indigo-400 hover:text-indigo-300 transition" title="Editar"><span class="material-icons-round text-sm">edit</span></button>
                             ${u.username !== 'admin' ? `<button onclick="app.deleteUserAccount('${u.id}')" class="text-red-400 hover:text-red-300 transition" title="Eliminar"><span class="material-icons-round text-sm">delete</span></button>` : ''}
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
 
                 Swal.fire({
                     title: 'Gestión de Usuarios',
@@ -2408,6 +2495,33 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
             async editUserAccount(id) {
                 const user = this.adminUsers.find(u => u.id == id);
                 if (!user) return;
+                const initials = this.getUserInitials(user.username);
+                const currentColor = user.profile_color || this.getColorForString(user.username);
+
+                const gradientPresets = [
+                    { label: 'Índigo', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+                    { label: 'Fuego', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+                    { label: 'Océano', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+                    { label: 'Aurora', value: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+                    { label: 'Atardecer', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+                    { label: 'Glaciar', value: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+                    { label: 'Magma', value: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)' },
+                    { label: 'Medianoche', value: 'linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%)' },
+                    { label: 'Rubí', value: 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)' },
+                    { label: 'Esmeralda', value: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' },
+                    { label: 'Lavanda', value: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
+                    { label: 'Cobre', value: 'linear-gradient(135deg, #c94b4b 0%, #4b134f 100%)' },
+                ];
+                const solidColors = ['#6366f1','#3b82f6','#06b6d4','#10b981','#84cc16','#f59e0b','#f97316','#ef4444','#ec4899','#a855f7','#8b5cf6','#64748b'];
+
+                const presetHtml = gradientPresets.map(g =>
+                    `<div onclick="document.getElementById('swal-user-color-preview').style.background='${g.value}';window._selectedUserColor='${g.value}'" title="${g.label}" style="width:28px;height:28px;border-radius:6px;background:${g.value};cursor:pointer;border:2px solid transparent;transition:border-color 0.1s;flex-shrink:0;" onmouseover="this.style.borderColor='#fff'" onmouseout="this.style.borderColor='transparent'"></div>`
+                ).join('');
+                const solidHtml = solidColors.map(c =>
+                    `<div onclick="document.getElementById('swal-user-color-preview').style.background='${c}';window._selectedUserColor='${c}'" title="${c}" style="width:22px;height:22px;border-radius:4px;background:${c};cursor:pointer;border:2px solid transparent;transition:border-color 0.1s;flex-shrink:0;" onmouseover="this.style.borderColor='#fff'" onmouseout="this.style.borderColor='transparent'"></div>`
+                ).join('');
+
+                window._selectedUserColor = currentColor;
 
                 const { value: form } = await Swal.fire({
                     title: 'Editar Usuario',
@@ -2437,14 +2551,41 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                                     }
                                 </select>
                             </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase" style="display:block;margin-bottom:6px;">Color del badge</label>
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                                    <div id="swal-user-color-preview" style="width:34px;height:28px;border-radius:6px;background:${currentColor};flex-shrink:0;border:2px solid rgba(255,255,255,0.2);"></div>
+                                    <span style="font-size:10px;color:#64748b;">Vista previa del badge</span>
+                                    <div style="width:28px;height:22px;border-radius:4px;background:${currentColor};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0;">${initials}</div>
+                                </div>
+                                <div style="margin-bottom:6px;">
+                                    <div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">Degradados</div>
+                                    <div style="display:flex;gap:5px;flex-wrap:wrap;">${presetHtml}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">Color sólido</div>
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                        ${solidHtml}
+                                        <input type="color" id="swal-user-color-picker" value="#6366f1" style="width:22px;height:22px;border:none;background:none;cursor:pointer;padding:0;border-radius:4px;" title="Personalizado">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     `,
-                    background: '#1e293b', color: '#fff', showCancelButton: true, confirmButtonText: 'Guardar', confirmButtonColor: '#indigo-600',
+                    background: '#1e293b', color: '#fff', showCancelButton: true, confirmButtonText: 'Guardar', confirmButtonColor: '#4f46e5', cancelButtonColor: '#475569',
+                    didOpen: () => {
+                        document.getElementById('swal-user-color-picker').addEventListener('input', e => {
+                            const v = e.target.value;
+                            document.getElementById('swal-user-color-preview').style.background = v;
+                            window._selectedUserColor = v;
+                        });
+                    },
                     preConfirm: () => {
                         return {
                             password: document.getElementById('edit-pass').value,
                             role: document.getElementById('edit-role').value,
-                            region: document.getElementById('edit-region').value
+                            region: document.getElementById('edit-region').value,
+                            profile_color: window._selectedUserColor || null
                         };
                     }
                 });
@@ -2795,9 +2936,12 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                 if (!brand) return;
                 const isLight = document.body.classList.contains('light-mode');
                 const currentSvg = (brand.logo_svg || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const currentColor = brand.brand_color || this.getColorForBrand(brand.name);
                 const previewHtml = brand.logo_svg
                     ? `<div style="width:48px;height:40px;display:flex;align-items:center;justify-content:center;overflow:hidden;">${brand.logo_svg}</div>`
                     : '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
+                const presetColors = ['#6366f1','#3b82f6','#0ea5e9','#06b6d4','#10b981','#14b8a6','#84cc16','#f59e0b','#f97316','#ef4444','#ec4899','#a855f7','#8b5cf6','#64748b','#0f172a'];
+                const swatches = presetColors.map(c => `<span onclick="document.getElementById('swal-brand-color').value='${c}'" title="${c}" style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${c};cursor:pointer;border:2px solid transparent;transition:border-color 0.1s;" onmouseover="this.style.borderColor='#fff'" onmouseout="this.style.borderColor='transparent'"></span>`).join('');
                 const { value: formValues, isConfirmed } = await Swal.fire({
                     title: `Editar: ${brand.name}`,
                     background: isLight ? '#fff' : '#1e293b',
@@ -2812,6 +2956,13 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                             <div>
                                 <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Nombre</label>
                                 <input id="swal-brand-name" class="swal2-input" style="width:100%;margin:0 0 0 0;box-sizing:border-box;" value="${brand.name.replace(/"/g, '&quot;')}">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:600;margin-bottom:6px;color:#94a3b8;">Color de la marca</label>
+                                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                    <input type="color" id="swal-brand-color" value="${currentColor}" style="width:36px;height:32px;border:none;background:none;cursor:pointer;padding:0;border-radius:4px;">
+                                    <div style="display:flex;gap:4px;flex-wrap:wrap;">${swatches}</div>
+                                </div>
                             </div>
                             <div>
                                 <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">Icono SVG inline <span style="font-weight:400;color:#64748b;">(pega el código &lt;svg ...&gt;...&lt;/svg&gt;)</span></label>
@@ -2837,7 +2988,8 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                         const name = (document.getElementById('swal-brand-name')?.value || '').trim();
                         if (!name) { Swal.showValidationMessage('El nombre es obligatorio'); return false; }
                         const logoSvg = (document.getElementById('swal-brand-svg')?.value || '').trim();
-                        return { name, logoSvg };
+                        const brandColor = document.getElementById('swal-brand-color')?.value || null;
+                        return { name, logoSvg, brandColor };
                     }
                 });
                 if (!isConfirmed || !formValues) return;
@@ -2845,7 +2997,7 @@ Si tienes dificultad para localizarles o contactar con ellos, dínoslo para pode
                     const res = await fetch('api/clients.php?id=' + id, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: formValues.name, country_id: brand.country_id, logo_svg: formValues.logoSvg || null })
+                        body: JSON.stringify({ name: formValues.name, country_id: brand.country_id, logo_svg: formValues.logoSvg || null, brand_color: formValues.brandColor || null })
                     });
                     if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
                     await Promise.all([this.fetchClients(), this.fetchRegions()]);

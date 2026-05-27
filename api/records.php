@@ -8,12 +8,32 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
+        // Migración: sincronizar el campo id dentro del JSON con la columna PK
+        if (isset($_GET['sync_ids']) && $_GET['sync_ids'] === '1') {
+            $stmt = $pdo->query("SELECT id, data FROM records");
+            $rows = $stmt->fetchAll();
+            $upd = $pdo->prepare("UPDATE records SET data = ? WHERE id = ?");
+            $fixed = 0;
+            foreach ($rows as $row) {
+                $decoded = json_decode($row['data'], true) ?? [];
+                if (($decoded['id'] ?? null) !== $row['id']) {
+                    $decoded['id'] = $row['id'];
+                    $upd->execute([json_encode($decoded), $row['id']]);
+                    $fixed++;
+                }
+            }
+            echo json_encode(['success' => true, 'fixed' => $fixed, 'total' => count($rows)]);
+            break;
+        }
+
         // Listar registros (solo el campo data que contiene el JSON)
-        $stmt = $pdo->query("SELECT data FROM records");
+        $stmt = $pdo->query("SELECT id, data FROM records");
         $rows = $stmt->fetchAll();
         $results = [];
         foreach ($rows as $row) {
-            $results[] = json_decode($row['data'], true);
+            $decoded = json_decode($row['data'], true) ?? [];
+            $decoded['id'] = $row['id']; // el id de la columna PK es la fuente de verdad
+            $results[] = $decoded;
         }
         echo json_encode($results);
         break;
@@ -141,6 +161,20 @@ switch ($method) {
             exit;
         }
         $record = json_decode(file_get_contents('php://input'), true);
+        if (!$record) {
+            http_response_code(400);
+            echo json_encode(['error' => 'JSON inválido o vacío']);
+            exit;
+        }
+        // Verificar existencia real antes de actualizar (rowCount=0 no distingue "no existe" de "sin cambios")
+        $check = $pdo->prepare("SELECT id FROM records WHERE id = ?");
+        $check->execute([$id]);
+        if (!$check->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => "Registro '$id' no encontrado"]);
+            exit;
+        }
+        $record['id'] = $id; // garantizar coherencia del id dentro del JSON
         $stmt = $pdo->prepare("UPDATE records SET fechaAlta=?, marca=?, nombre=?, apellidos=?, email=?, telefono=?, concesionario=?, tipoAcceso=?, data=?, client_id=? WHERE id=?");
         $stmt->execute([
             $record['fechaAlta'] ?? null,
