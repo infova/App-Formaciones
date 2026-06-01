@@ -76,6 +76,7 @@ const _appAdmin = {
 
         try {
             await this.apiCreateUser({ username, password, role, region });
+            this.logAction('CREAR_USUARIO', `${username} — Rol: ${role}, Región: ${region}`);
             this.openAdminPanel();
         } catch (e) {
             Swal.fire({ icon: 'error', title: 'Error', text: e.message, background: '#1e293b', color: '#fff' });
@@ -191,8 +192,10 @@ const _appAdmin = {
     },
 
     async deleteUserAccount(id) {
+        const target = this.adminUsers ? this.adminUsers.find(u => u.id == id) : null;
         if (await Swal.fire({ title: '¿Eliminar usuario?', icon: 'warning', showCancelButton: true, background: '#1e293b', color: '#fff', confirmButtonColor: '#ef4444' }).then(r => r.isConfirmed)) {
             await this.apiDeleteUserAccount(id);
+            this.logAction('ELIMINAR_USUARIO', target ? target.username : `ID ${id}`);
             this.openAdminPanel();
         }
     },
@@ -262,12 +265,12 @@ const _appAdmin = {
                             </div>
                         </div>
                     </div>
-                    <div style="border-top:1px solid #334155;margin-top:14px;padding-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                    <div style="border-top:1px solid #334155;margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:8px;">
                         ${u.role === 'admin' ? `
-                        <button type="button" onclick="Swal.close();setTimeout(()=>app.openAdminPanel(),200)" style="background:#4338ca;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">👤 Administrar usuarios</button>
-                        <button type="button" onclick="Swal.close();setTimeout(()=>app.openRegionManager(),200)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">🌍 Gestionar regiones y marcas</button>
+                        <button type="button" onclick="Swal.close();setTimeout(()=>app.openAdminPanel(),200)" style="width:100%;background:#4338ca;color:#fff;border:none;border-radius:6px;padding:10px 12px;font-size:14px;font-weight:700;cursor:pointer;text-align:center;" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">👤 Administrar usuarios</button>
+                        <button type="button" onclick="Swal.close();setTimeout(()=>app.openRegionManager(),200)" style="width:100%;background:#0f766e;color:#fff;border:none;border-radius:6px;padding:10px 12px;font-size:14px;font-weight:700;cursor:pointer;text-align:center;" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">🌍 Gestionar regiones y marcas</button>
                         ` : ''}
-                        <button type="button" onclick="app.logout()" style="background:transparent;color:#ef4444;border:1px solid #ef4444;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-left:auto;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='transparent'">⏻ Cerrar sesión</button>
+                        <button type="button" onclick="app.logout()" style="width:100%;background:transparent;color:#ef4444;border:1px solid #ef4444;border-radius:6px;padding:10px 12px;font-size:14px;font-weight:700;cursor:pointer;text-align:center;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='transparent'">⏻ Cerrar sesión</button>
                     </div>
                 </div>
             `,

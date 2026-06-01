@@ -145,6 +145,7 @@ const _appKanban = {
         u.formacion.status = newStatus;
         try {
             await app.apiUpdate(u);
+            app.logAction('MOVER_KANBAN', `${u.nombre} ${u.apellidos} → ${newStatus}`);
             app.renderAll();
         } catch (e) {
             u.formacion = formacionBackup;

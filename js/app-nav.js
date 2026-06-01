@@ -101,17 +101,22 @@ const _appNav = {
             this.nav('dashboard');
             return;
         }
+        if (view === 'logs' && (!this.user || this.user.role !== 'admin')) {
+            this.nav('dashboard');
+            return;
+        }
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-slate-800', 'text-white'));
         const navEl = document.getElementById('nav-' + (view === 'it-archived' ? 'it' : view));
         if (navEl) navEl.classList.add('bg-slate-800', 'text-white');
-        ['dashboard', 'it', 'it-archived', 'kanban', 'informes'].forEach(v => {
+        ['dashboard', 'it', 'it-archived', 'kanban', 'informes', 'logs'].forEach(v => {
             const el = document.getElementById('view-' + v);
             if (el) el.classList.add('hidden');
         });
         document.getElementById('view-' + view).classList.remove('hidden');
-        document.getElementById('page-title').innerText = view.toUpperCase();
+        document.getElementById('page-title').innerText = view === 'logs' ? 'ACTIVIDAD' : view.toUpperCase();
         this.renderAll();
         if (view === 'kanban') this.initKanban();
+        if (view === 'logs') this.renderLogs();
     },
 
     setFilter(brand) {

@@ -176,7 +176,7 @@ const _appImport = {
 
                 await this.fetchData();
                 this.renderAll();
-
+                this.logAction('IMPORTAR_BULK', `${records.length} comerciales importados`);
                 Swal.fire({ title: 'Éxito', text: `Se han importado ${records.length} registros`, icon: 'success', background: '#1e293b', color: '#fff' });
             } catch (e) {
                 Swal.fire({ title: 'Error', text: e.message, icon: 'error', background: '#1e293b', color: '#fff' });

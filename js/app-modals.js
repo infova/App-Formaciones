@@ -19,8 +19,10 @@ const _appModals = {
             color: '#fff'
         });
         if (result.isConfirmed) {
+            const label = u ? `${u.nombre} ${u.apellidos} — ${u.marca || ''}` : id;
             this.db = this.db.filter(u => u.id != id);
             this.apiDelete(id);
+            this.logAction('ELIMINAR_COMERCIAL', label);
             this.renderAll();
         }
     },
@@ -151,6 +153,7 @@ const _appModals = {
                 this.db[i] = form;
                 try {
                     await this.apiUpdate(form);
+                    this.logAction('EDITAR_COMERCIAL', `${form.nombre} ${form.apellidos} — ${form.marca || ''}`);
                 } catch (e) {
                     if (e.message && e.message.includes('no encontrado')) {
                         await this.fetchData();
@@ -161,6 +164,7 @@ const _appModals = {
             } else {
                 this.db.push(form);
                 await this.apiCreate(form);
+                this.logAction('CREAR_COMERCIAL', `${form.nombre} ${form.apellidos} — ${form.marca || ''}`);
             }
             this.renderAll();
         }

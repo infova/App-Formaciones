@@ -50,13 +50,26 @@ switch ($method) {
         $id = $_GET['id'] ?? null;
         $data = json_decode(file_get_contents('php://input'), true);
         $profileColor = isset($data['profile_color']) ? $data['profile_color'] : null;
+        // Solo actualizar role/brands/region si vienen explícitamente en el payload
+        // (el perfil propio solo envía password y profile_color, no debe tocar el rol)
+        $hasRoleData = array_key_exists('role', $data) || array_key_exists('brands', $data) || array_key_exists('region', $data);
         if (!empty($data['password'])) {
             $hash = password_hash($data['password'], PASSWORD_BCRYPT);
-            $stmt = $pdo->prepare("UPDATE users SET password = ?, role = ?, brands = ?, region = ?, profile_color = ? WHERE id = ?");
-            $stmt->execute([$hash, $data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $profileColor, $id]);
+            if ($hasRoleData) {
+                $stmt = $pdo->prepare("UPDATE users SET password = ?, role = ?, brands = ?, region = ?, profile_color = ? WHERE id = ?");
+                $stmt->execute([$hash, $data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $profileColor, $id]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE users SET password = ?, profile_color = ? WHERE id = ?");
+                $stmt->execute([$hash, $profileColor, $id]);
+            }
         } else {
-            $stmt = $pdo->prepare("UPDATE users SET role = ?, brands = ?, region = ?, profile_color = ? WHERE id = ?");
-            $stmt->execute([$data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $profileColor, $id]);
+            if ($hasRoleData) {
+                $stmt = $pdo->prepare("UPDATE users SET role = ?, brands = ?, region = ?, profile_color = ? WHERE id = ?");
+                $stmt->execute([$data['role'] ?? 'user', $data['brands'] ?? 'All', $data['region'] ?? 'España', $profileColor, $id]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE users SET profile_color = ? WHERE id = ?");
+                $stmt->execute([$profileColor, $id]);
+            }
         }
         echo json_encode(['success' => true]);
         break;

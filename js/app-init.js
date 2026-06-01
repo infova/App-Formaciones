@@ -14,7 +14,8 @@ Object.assign(app,
     _appRegions,
     _appAdmin,
     _appExport,
-    _appImport
+    _appImport,
+    _appLogs
 );
 
 app.init = async function () {
@@ -49,6 +50,13 @@ app.init = async function () {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
+    }
+
+    // Mostrar nav de Actividad solo para admins
+    const navLogs = document.getElementById('nav-logs');
+    if (navLogs) {
+        if (this.user.role === 'admin') navLogs.classList.remove('hidden');
+        else navLogs.classList.add('hidden');
     }
 
     this.year = document.getElementById('global-year').value;

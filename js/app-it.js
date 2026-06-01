@@ -56,6 +56,7 @@ const _appIT = {
                         await this.apiUpdate(u);
                     }
                 }
+                this.logAction('IT_CONFIGURAR_BULK', `${ids.length} iPad(s) configurados y archivados`);
                 await this.fetchData();
                 this.renderAll();
                 Swal.fire({ icon: 'success', title: 'Ipad(s) configurados y archivados correctamente', background: '#1e293b', color: '#fff' });
@@ -95,6 +96,7 @@ const _appIT = {
                         await this.apiUpdate(u);
                     }
                 }
+                this.logAction('IT_ARCHIVAR_BULK', `${ids.length} comercial(es) archivados — Motivo: ${form.motive || 'sin especificar'}`);
                 await this.fetchData();
                 this.renderAll();
                 Swal.fire({ icon: 'success', title: 'Comerciales archivados correctamente', background: '#1e293b', color: '#fff' });
@@ -208,6 +210,7 @@ const _appIT = {
         if (text !== undefined) {
             u.itComment = text;
             await this.apiUpdate(u);
+            this.logAction('IT_COMENTARIO', `${u.nombre} ${u.apellidos} — ${text.substring(0, 80)}`);
             this.renderIT();
         }
     },
@@ -234,6 +237,7 @@ const _appIT = {
             user.fechaArchivado = form.date;
             user.motivoArchivado = form.motive;
             await this.apiUpdate(user);
+            this.logAction('IT_ARCHIVAR', `${user.nombre} ${user.apellidos} — Motivo: ${form.motive || 'sin especificar'}`);
             this.renderAll();
             Swal.fire({ icon: 'success', title: 'Usuario Archivado', background: '#1e293b', color: '#fff' });
         }
@@ -252,7 +256,11 @@ const _appIT = {
 
         if (result.isConfirmed) {
             user.isArchived = false;
+            user.fechaArchivado = null;
+            user.motivoArchivado = null;
+            user.formacion = { ...user.formacion, status: 'Pendiente', date: '', confirmedBy: null };
             await this.apiUpdate(user);
+            this.logAction('IT_DESARCHIVAR', `${user.nombre} ${user.apellidos} — estado restaurado a Pendiente`);
             this.renderAll();
             this.renderITArchived();
         }
@@ -309,6 +317,7 @@ const _appIT = {
             u.motivoArchivado = "iPad Configurado";
             u.itComment = "iPad Configurado";
             await this.apiUpdate(u);
+            this.logAction('IT_CONFIGURAR', `${u.nombre} ${u.apellidos} — iPad configurado el ${d}`);
             this.renderAll();
             Swal.fire({ icon: 'success', title: 'iPad Configurado y Archivado', background: '#1e293b', color: '#fff' });
         }
