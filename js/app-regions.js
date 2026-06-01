@@ -375,6 +375,22 @@ const _appRegions = {
                             ${previewHtml}
                         </div>
                     </div>
+                    <div style="border-top:1px solid rgba(100,116,139,0.3);padding-top:12px;margin-top:4px;">
+                        <p style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">📋 Encuesta de Satisfacción</p>
+                        <div style="margin-bottom:8px;">
+                            <label style="display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#94a3b8;">URL de la encuesta</label>
+                            <input id="swal-survey-url" class="swal2-input" style="width:100%;margin:0;box-sizing:border-box;font-size:11px;" placeholder="https://forms.office.com/..." value="${(brand.survey_url || '').replace(/"/g, '&quot;')}">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;">
+                                <input type="checkbox" id="swal-survey-qr" style="opacity:0;width:0;height:0;position:absolute;" ${brand.survey_qr_enabled ? 'checked' : ''}>
+                                <span id="swal-qr-track" style="display:inline-block;width:36px;height:20px;border-radius:10px;background:${brand.survey_qr_enabled ? '#10b981' : '#475569'};transition:background 0.2s;position:relative;flex-shrink:0;">
+                                    <span id="swal-qr-thumb" style="position:absolute;top:3px;left:${brand.survey_qr_enabled ? '19px' : '3px'};width:14px;height:14px;border-radius:50%;background:#fff;transition:left 0.2s;"></span>
+                                </span>
+                                <span style="margin-left:8px;font-size:11px;color:#94a3b8;">Habilitar QR en modal de formación completada</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>`,
             didOpen: () => {
                 const ta = document.getElementById('swal-brand-svg');
@@ -387,13 +403,23 @@ const _appRegions = {
                         preview.innerHTML = '<span style="font-size:11px;color:#64748b;">Vista previa del icono</span>';
                     }
                 });
+                // Toggle QR
+                const qrChk = document.getElementById('swal-survey-qr');
+                const qrTrack = document.getElementById('swal-qr-track');
+                const qrThumb = document.getElementById('swal-qr-thumb');
+                qrChk.addEventListener('change', function() {
+                    qrTrack.style.background = this.checked ? '#10b981' : '#475569';
+                    qrThumb.style.left = this.checked ? '19px' : '3px';
+                });
             },
             preConfirm: () => {
                 const name = (document.getElementById('swal-brand-name')?.value || '').trim();
                 if (!name) { Swal.showValidationMessage('El nombre es obligatorio'); return false; }
                 const logoSvg = (document.getElementById('swal-brand-svg')?.value || '').trim();
                 const brandColor = document.getElementById('swal-brand-color')?.value || null;
-                return { name, logoSvg, brandColor };
+                const surveyUrl = (document.getElementById('swal-survey-url')?.value || '').trim() || null;
+                const surveyQrEnabled = document.getElementById('swal-survey-qr')?.checked ? 1 : 0;
+                return { name, logoSvg, brandColor, surveyUrl, surveyQrEnabled };
             }
         });
         if (!isConfirmed || !formValues) return;
@@ -401,7 +427,7 @@ const _appRegions = {
             const res = await fetch('api/clients.php?id=' + id, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: formValues.name, country_id: brand.country_id, logo_svg: formValues.logoSvg || null, brand_color: formValues.brandColor || null })
+                body: JSON.stringify({ name: formValues.name, country_id: brand.country_id, logo_svg: formValues.logoSvg || null, brand_color: formValues.brandColor || null, survey_url: formValues.surveyUrl, survey_qr_enabled: formValues.surveyQrEnabled })
             });
             if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
             await Promise.all([this.fetchClients(), this.fetchRegions()]);

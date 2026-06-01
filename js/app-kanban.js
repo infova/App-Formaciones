@@ -54,7 +54,8 @@ const _appKanban = {
                             <h4 class="text-xs font-bold text-white truncate uppercase" style="max-width:65%">${u.nombre} ${u.apellidos}</h4>
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded flex-shrink-0">${this.formatDateEU(u.formacion.date)}</span>
                         </div>
-                        <div class="text-[9px] text-slate-500 uppercase truncate">${u.concesionario || '—'}</div>`;
+                        <div class="text-[9px] text-slate-500 uppercase truncate">${u.concesionario || '—'}</div>
+                        ${u.tipoFormacion ? `<div class="mt-0.5"><span class="text-[8px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-medium">${u.tipoFormacion}</span></div>` : ''}`;
                 } else if (isNoRealizada) {
                     card.innerHTML = `
                         <div class="text-xs font-bold text-slate-300 uppercase truncate mb-1 line-through decoration-slate-500">${u.nombre} ${u.apellidos}</div>
@@ -69,7 +70,8 @@ const _appKanban = {
                 } else {
                     card.innerHTML = `
                         <div class="text-xs font-bold text-white uppercase truncate mb-1">${u.nombre} ${u.apellidos}</div>
-                        <div class="text-[9px] text-slate-400 uppercase truncate mb-2">${u.concesionario}</div>
+                        <div class="text-[9px] text-slate-400 uppercase truncate mb-1">${u.concesionario}</div>
+                        ${u.tipoFormacion ? `<div class="mb-2"><span class="text-[8px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-medium">${u.tipoFormacion}</span></div>` : '<div class="mb-2"></div>'}
                         <div class="flex items-center justify-between gap-1 mb-2">
                             <div class="flex gap-1">
                                 <button onclick="app.editUser('${u.id}')" class="text-slate-400 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
@@ -147,6 +149,7 @@ const _appKanban = {
             await app.apiUpdate(u);
             app.logAction('MOVER_KANBAN', `${u.nombre} ${u.apellidos} → ${newStatus}`);
             app.renderAll();
+            if (newStatus === 'Realizada') app.openSurveyModal(u);
         } catch (e) {
             u.formacion = formacionBackup;
             if (e.message && e.message.includes('no encontrado')) {
@@ -156,5 +159,92 @@ const _appKanban = {
             }
             Swal.fire({ title: 'Error al guardar', text: e.message || 'No se pudo guardar el cambio de estado. Inténtalo de nuevo.', icon: 'error', background: '#1e293b', color: '#fff', confirmButtonColor: '#6366f1' });
         }
+    },
+
+    openSurveyModal(u) {
+        const brand = (this.clientRecords || []).find(c => c.id == u.client_id);
+        const surveyUrl = brand?.survey_url || '';
+        const qrEnabled = brand?.survey_qr_enabled && surveyUrl;
+        const brandColor = brand?.brand_color || '#6366f1';
+
+        const appName = u.marca || 'Formaciones';
+        const assignedBy = u.formacion?.confirmedBy || (this.user?.username || '');
+        const emailSubject = encodeURIComponent(`Encuesta de satisfacción — Formación ${appName}`);
+        const emailBody = encodeURIComponent(
+            `Hola ${u.nombre};\n\n` +
+            `Te quería agradecer la implicación y la atención que has tenido durante el día de hoy en la formación de SSC.\n\n` +
+            `Te mando un enlace para que valores tu experiencia y me des tu opinión de la formación y si quieres sugerir alguna mejora y comentarme algo, todo me ayudara a crecer y a mejorar\n\n` +
+            `Puedes acceder desde este enlace:\n\n` +
+            `${surveyUrl || '(URL de encuesta no configurada)'}\n\n` +
+            `Muchas gracias.\n\n` +
+            `Saludos.`
+        );
+        const mailtoHref = surveyUrl ? `mailto:${u.email}?subject=${emailSubject}&body=${emailBody}` : '';
+
+        const qrSectionHtml = qrEnabled ? `
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(100,116,139,0.3);">
+                <p style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">📱 Código QR — Formación Presencial</p>
+                <div style="display:flex;justify-content:center;">
+                    <div id="survey-qr-canvas" style="background:#fff;padding:10px;border-radius:8px;display:inline-block;"></div>
+                </div>
+                <p style="font-size:9px;color:#64748b;text-align:center;margin-top:6px;">Muestra este QR al comercial para que acceda a la encuesta desde su móvil</p>
+            </div>` : '';
+
+        const noUrlWarning = !surveyUrl ? `
+            <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:10px;margin-top:12px;">
+                <p style="font-size:10px;color:#f59e0b;margin:0;">⚠ No hay URL de encuesta configurada para <strong>${u.marca || 'esta marca'}</strong>. Configúrala en <em>Gestionar Marcas → Editar marca</em>.</p>
+            </div>` : '';
+
+        Swal.fire({
+            title: '✅ Formación Completada',
+            html: `
+                <div style="text-align:left;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;">
+                        <div style="width:8px;height:8px;border-radius:50%;background:${brandColor};flex-shrink:0;"></div>
+                        <div>
+                            <p style="font-size:13px;font-weight:700;color:#fff;margin:0;">${u.nombre} ${u.apellidos}</p>
+                            <p style="font-size:10px;color:#94a3b8;margin:0;">${u.concesionario || ''} · ${u.marca || ''}</p>
+                        </div>
+                    </div>
+                    <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">📧 Enviar Encuesta de Satisfacción</p>
+                    ${surveyUrl ? `
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:10px;font-size:10px;color:#cbd5e1;line-height:1.6;">
+                        <strong style="color:#a5b4fc;">Para:</strong> ${u.email || '(sin email)'}<br>
+                        <strong style="color:#a5b4fc;">Asunto:</strong> Encuesta de satisfacción — Formación ${appName}<br>
+                        <strong style="color:#a5b4fc;">Enlace:</strong> <span style="color:#67e8f9;word-break:break-all;">${surveyUrl}</span>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:10px;">
+                        <a href="${mailtoHref}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#6366f1;color:#fff;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;">
+                            <span class="material-icons-round" style="font-size:14px;">mail</span> Abrir correo
+                        </a>
+                        <button onclick="navigator.clipboard.writeText('${surveyUrl.replace(/'/g, "\\'")}').then(()=>this.textContent='✓ Copiado').catch(()=>{})" style="flex:1;background:#334155;color:#94a3b8;border:none;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">
+                            <span class="material-icons-round" style="font-size:14px;vertical-align:middle;">content_copy</span> Copiar enlace
+                        </button>
+                    </div>` : ''}
+                    ${noUrlWarning}
+                    ${qrSectionHtml}
+                </div>`,
+            background: '#1e293b',
+            color: '#fff',
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#475569',
+            width: '520px',
+            didOpen: () => {
+                if (qrEnabled && typeof QRCode !== 'undefined') {
+                    new QRCode(document.getElementById('survey-qr-canvas'), {
+                        text: surveyUrl,
+                        width: 180,
+                        height: 180,
+                        colorDark: '#1e293b',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                } else if (qrEnabled) {
+                    // Fallback si QRCode.js no cargó: mostrar imagen via API externa
+                    const el = document.getElementById('survey-qr-canvas');
+                    if (el) el.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(surveyUrl)}&size=180x180&margin=2" style="border-radius:4px;" alt="QR">`;
+                }
+            }
+        });
     }
 };

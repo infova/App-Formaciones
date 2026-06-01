@@ -4,12 +4,12 @@ const _appExport = {
     exportCSV() {
         try {
             const data = this.getData();
-            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;Observaciones\n";
+            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;TipoFormacion;Observaciones\n";
             data.forEach(u => {
                 const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
                 const fStatus = u.formacion?.status || 'Pendiente';
                 const fDate = u.formacion?.date || '';
-                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
+                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${u.tipoFormacion || ''};${obs}\n`;
             });
             const l = document.createElement("a");
             l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
@@ -48,12 +48,12 @@ const _appExport = {
 
             if (data.length === 0) return Swal.fire('Vacio', 'No hay registros en ese rango y criterio.', 'info');
 
-            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;Observaciones\n";
+            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;TipoFormacion;Observaciones\n";
             data.forEach(u => {
                 const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
                 const fStatus = u.formacion?.status || 'Pendiente';
                 const fDate = u.formacion?.date || '';
-                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${obs}\n`;
+                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${u.tipoFormacion || ''};${obs}\n`;
             });
             const l = document.createElement('a');
             l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));

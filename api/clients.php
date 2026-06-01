@@ -11,11 +11,19 @@ try {
     $pdo->exec("ALTER TABLE clients ADD COLUMN brand_color VARCHAR(20) NULL");
 } catch (PDOException $e) { /* already exists */
 }
+try {
+    $pdo->exec("ALTER TABLE clients ADD COLUMN survey_url VARCHAR(500) NULL");
+} catch (PDOException $e) { /* already exists */
+}
+try {
+    $pdo->exec("ALTER TABLE clients ADD COLUMN survey_qr_enabled TINYINT(1) DEFAULT 0");
+} catch (PDOException $e) { /* already exists */
+}
 
 switch ($method) {
     case 'GET':
         $stmt = $pdo->query("
-            SELECT c.id, c.name, c.region, c.country_id, c.logo_svg, c.brand_color,
+            SELECT c.id, c.name, c.region, c.country_id, c.logo_svg, c.brand_color, c.survey_url, c.survey_qr_enabled,
                    co.name AS country_name, r.id AS region_id, r.name AS region_name
             FROM clients c
             LEFT JOIN countries co ON co.id = c.country_id
@@ -41,8 +49,8 @@ switch ($method) {
             $region = $r->fetchColumn() ?: $region;
         }
         try {
-            $stmt = $pdo->prepare("INSERT INTO clients (name, region, country_id, logo_svg, brand_color) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $data['brand_color'] ?? null]);
+            $stmt = $pdo->prepare("INSERT INTO clients (name, region, country_id, logo_svg, brand_color, survey_url, survey_qr_enabled) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $data['brand_color'] ?? null, $data['survey_url'] ?? null, isset($data['survey_qr_enabled']) ? (int)$data['survey_qr_enabled'] : 0]);
             echo json_encode(['success' => true, 'id' => (int)$pdo->lastInsertId()]);
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) {
@@ -64,8 +72,8 @@ switch ($method) {
             $r->execute([$countryId]);
             $region = $r->fetchColumn() ?: $region;
         }
-        $stmt = $pdo->prepare("UPDATE clients SET name = ?, region = ?, country_id = ?, logo_svg = ?, brand_color = ? WHERE id = ?");
-        $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $data['brand_color'] ?? null, $id]);
+        $stmt = $pdo->prepare("UPDATE clients SET name = ?, region = ?, country_id = ?, logo_svg = ?, brand_color = ?, survey_url = ?, survey_qr_enabled = ? WHERE id = ?");
+        $stmt->execute([$data['name'], $region, $countryId, $data['logo_svg'] ?? null, $data['brand_color'] ?? null, $data['survey_url'] ?? null, isset($data['survey_qr_enabled']) ? (int)$data['survey_qr_enabled'] : 0, $id]);
         echo json_encode(['success' => true]);
         break;
 

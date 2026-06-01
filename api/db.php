@@ -96,6 +96,16 @@ region VARCHAR(50) DEFAULT 'España'
         // Ignorar si la columna ya existe
     }
 
+    // Encuesta de satisfacción por marca
+    try {
+        $pdo->exec("ALTER TABLE clients ADD COLUMN survey_url VARCHAR(500) NULL");
+    } catch (PDOException $e) { /* already exists */
+    }
+    try {
+        $pdo->exec("ALTER TABLE clients ADD COLUMN survey_qr_enabled TINYINT(1) DEFAULT 0");
+    } catch (PDOException $e) { /* already exists */
+    }
+
     // Vincular registros con instancia concreta de marca (país)
     try {
         $pdo->exec("ALTER TABLE records ADD COLUMN client_id INT NULL");

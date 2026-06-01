@@ -5,12 +5,12 @@ const _appImport = {
         const headers = [
             'id Comercial', 'fecha alta', 'marca', 'año', 'nombre', 'apellidos',
             'telefono', 'email', 'concesionario', 'tipo de acceso', 'Serial Tablet',
-            'comercial anterior', 'requiere formacion', 'requiere configuracion IT', 'observaciones'
+            'comercial anterior', 'requiere formacion', 'requiere configuracion IT', 'observaciones', 'tipo formacion'
         ];
         const example = [
             '9999', '2026-01-22', 'Kia', '2026', 'Juan', 'Pérez',
             '600123456', 'juan@example.com', 'Sertisa', 'Tablet', 'SN123456',
-            'N/A', 'Si', 'No', 'Comercial de nueva incorporación'
+            'N/A', 'Si', 'No', 'Comercial de nueva incorporación', 'Presencial'
         ];
         const csv = "\uFEFF" + headers.join(';') + "\n" + example.join(';');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -29,13 +29,17 @@ const _appImport = {
             title: 'Importación Masiva de Comerciales',
             html: `
                 <div class="text-left space-y-4">
-                    <div class="bg-indigo-900/20 p-3 rounded-lg border border-indigo-500/30 text-[10px] text-slate-400">
-                        <p class="font-bold text-indigo-400 mb-2 uppercase">Información del CSV:</p>
-                        <p>• El archivo debe tener <strong>15 columnas</strong> en el orden exacto.</p>
-                        <p>• Formato: <strong>CSV (punto y coma)</strong></p>
-                        <p>• Booleano: <strong>"Si"</strong> para activar, <strong>"No"</strong> para desactivar.</p>
-                        <p>• Fechas en formato: <strong>AAAA-MM-DD</strong></p>
-                        <p>• Tipo de acceso: <strong>Tablet</strong>, <strong>Licencia Cloud</strong> o <strong>Acceso a Informes</strong></p>
+                    <div class="bg-indigo-900/20 p-3 rounded-lg border border-indigo-500/30 text-[10px] text-slate-400 space-y-1.5">
+                        <p class="font-bold text-indigo-400 mb-2 uppercase">Cómo rellenar la plantilla:</p>
+                        <p>• El archivo debe tener <strong>16 columnas</strong> separadas por <strong>punto y coma (;)</strong>.</p>
+                        <p>• La primera fila es la cabecera — no la elimines.</p>
+                        <p>• Booleanos (<em>requiere formacion / requiere config IT</em>): escribe <strong>Si</strong> o <strong>No</strong>.</p>
+                        <p>• Fechas en formato: <strong>AAAA-MM-DD</strong> (ej: 2026-01-22).</p>
+                        <p>• <em>tipo de acceso</em>: <strong>Tablet</strong>, <strong>Licencia Cloud</strong> o <strong>Acceso a Informes</strong>.</p>
+                        <p>• <em>tipo formacion</em> (col. 16, opcional): <strong>Presencial</strong>, <strong>AVCT</strong>, <strong>Sesión Teams</strong> o texto libre para otro tipo.</p>
+                        <div class="mt-2 bg-slate-800/60 rounded p-2 font-mono text-[9px] text-slate-500 leading-relaxed">
+                            1.id · 2.fecha alta · 3.marca · 4.año · 5.nombre · 6.apellidos · 7.telefono · 8.email · 9.concesionario · 10.tipo de acceso · 11.Serial Tablet · 12.comercial anterior · 13.requiere formacion · 14.requiere config IT · 15.observaciones · 16.tipo formacion
+                        </div>
                         <button onclick="app.downloadBulkTemplate()" class="mt-3 flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition font-bold uppercase">
                             <span class="material-icons-round text-sm">download</span> Descargar Plantilla CSV
                         </button>
@@ -81,7 +85,7 @@ const _appImport = {
             const rowNum = i + 1;
 
             if (values.length < 15) {
-                errors.push(`Fila ${rowNum}: Faltan columnas (Se esperan 15, se encontraron ${values.length})`);
+                errors.push(`Fila ${rowNum}: Faltan columnas (Se esperan al menos 15, se encontraron ${values.length})`);
                 continue;
             }
 
@@ -91,6 +95,7 @@ const _appImport = {
                 tabletSN, comercialAnterior, reqFormacion,
                 reqConfig, observaciones
             ] = values;
+            const tipoFormacion = values[15]?.trim() || '';
 
             const rowErrors = [];
             const allowedTipoAcceso = ['Tablet', 'Licencia Cloud', 'Acceso a Informes'];
@@ -124,6 +129,7 @@ const _appImport = {
                 comercialAnterior: comercialAnterior || '',
                 reqFormacion: parseBool(reqFormacion),
                 reqConfig: parseBool(reqConfig),
+                tipoFormacion: tipoFormacion,
                 observaciones: observaciones || '',
                 formacion: { status: 'Pendiente', date: '' }
             };

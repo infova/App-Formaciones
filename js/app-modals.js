@@ -94,6 +94,18 @@ const _appModals = {
                             <label for="sw-req-config" class="text-xs text-slate-400">Requiere Configuración IT</label>
                         </div>
                     </div>
+                    <div id="div-formacion-tipo" class="bg-slate-800/50 p-3 rounded border border-slate-600 mt-2" style="display:${user?.reqFormacion ? 'block' : 'none'}">
+                        <label class="field-label text-emerald-400">Tipo de Formación</label>
+                        <div class="grid grid-cols-2 gap-3 mt-1">
+                            <select id="sw-formacion-tipo" class="custom-field" onchange="window.toggleFormacionOtra(this.value)">
+                                <option value="Presencial" ${(!user?.tipoFormacion || user?.tipoFormacion === 'Presencial') ? 'selected' : ''}>Presencial</option>
+                                <option value="AVCT" ${user?.tipoFormacion === 'AVCT' ? 'selected' : ''}>AVCT</option>
+                                <option value="Sesión Teams" ${user?.tipoFormacion === 'Sesión Teams' ? 'selected' : ''}>Sesión Teams</option>
+                                <option value="Otra" ${(user?.tipoFormacion && !['Presencial','AVCT','Sesión Teams'].includes(user?.tipoFormacion)) ? 'selected' : ''}>Otra (indicar tipo)</option>
+                            </select>
+                            <input id="sw-formacion-otra" placeholder="Indicar tipo de formación..." class="custom-field border-emerald-500/50" style="display:${(user?.tipoFormacion && !['Presencial','AVCT','Sesión Teams'].includes(user?.tipoFormacion)) ? 'block' : 'none'}" value="${(user?.tipoFormacion && !['Presencial','AVCT','Sesión Teams'].includes(user?.tipoFormacion)) ? user.tipoFormacion : ''}">
+                        </div>
+                    </div>
                     <div class="mt-4">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
                         <textarea id="sw-obs" class="custom-field h-20 text-xs w-full p-2 resize-none" placeholder="Añadir observaciones...">${user?.observaciones || ''}</textarea>
@@ -108,6 +120,12 @@ const _appModals = {
                     document.getElementById('div-prev').style.display = isTab ? 'block' : 'none';
                 };
                 window.toggleFields(document.getElementById('sw-type').value);
+                window.toggleFormacionOtra = function (val) {
+                    document.getElementById('sw-formacion-otra').style.display = val === 'Otra' ? 'block' : 'none';
+                };
+                document.getElementById('sw-req').addEventListener('change', function () {
+                    document.getElementById('div-formacion-tipo').style.display = this.checked ? 'block' : 'none';
+                });
                 const idInput = document.getElementById('sw-id');
                 const errorDiv = document.getElementById('id-error');
                 idInput.addEventListener('input', () => {
@@ -140,6 +158,11 @@ const _appModals = {
                     tabletSN: document.getElementById('sw-serial').value,
                     reqFormacion: document.getElementById('sw-req').checked,
                     reqConfig: document.getElementById('sw-req-config').checked,
+                    tipoFormacion: (() => {
+                        if (!document.getElementById('sw-req').checked) return '';
+                        const tipo = document.getElementById('sw-formacion-tipo').value;
+                        return tipo === 'Otra' ? (document.getElementById('sw-formacion-otra').value.trim() || '') : tipo;
+                    })(),
                     fechaConfig: user?.fechaConfig || '',
                     formacion: user?.formacion || { status: 'Pendiente', date: '' },
                     observaciones: document.getElementById('sw-obs').value
