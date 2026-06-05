@@ -165,7 +165,10 @@ const _appModals = {
                     })(),
                     fechaConfig: user?.fechaConfig || '',
                     formacion: user?.formacion || { status: 'Pendiente', date: '' },
-                    observaciones: document.getElementById('sw-obs').value
+                    observaciones: document.getElementById('sw-obs').value,
+                    isArchived: user?.isArchived || false,
+                    fechaArchivado: user?.fechaArchivado || '',
+                    motivoArchivado: user?.motivoArchivado || ''
                 };
             }
         });
