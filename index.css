@@ -120,7 +120,6 @@ input[type="datetime-local"] {
     display: flex;
     flex: 1 1 auto;
     gap: 0.8rem;
-    height: 100%;
     min-height: 0;
     width: 100%;
     padding-bottom: 0.5rem;
@@ -136,7 +135,9 @@ input[type="datetime-local"] {
     -webkit-backdrop-filter: blur(14px);
     border-radius: 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.07);
+    min-height: 0;
     max-height: 100%;
+    overflow: hidden;
     box-shadow: 0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
@@ -152,19 +153,23 @@ input[type="datetime-local"] {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex: 0 0 auto;
 }
 
 .kanban-body {
-    flex-grow: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    min-height: 200px;
+    min-height: 0;
 }
 
 .kanban-card {
+    flex: 0 0 auto;
+    min-width: 0;
     transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
     border-left-width: 4px;
     cursor: grab;
@@ -412,6 +417,8 @@ input[type="datetime-local"] {
 .training-detail-person strong { color: #fff; font-size: 0.68rem; }
 .training-detail-person small { color: #94a3b8; font-size: 0.58rem; margin-top: 0.12rem; overflow-wrap: anywhere; }
 .training-attendance { flex-shrink: 0; padding: 0.25rem 0.4rem; border-radius: 0.4rem; color: #cbd5e1; background: rgba(100,116,139,0.2); font-size: 0.57rem; font-weight: 700; }
+.training-attendance.is-invited { color: #bae6fd; background: rgba(14,165,233,0.16); }
+.training-attendance.is-confirmed { color: #c7d2fe; background: rgba(99,102,241,0.2); }
 .training-attendance.is-attended { color: #6ee7b7; background: rgba(16,185,129,0.15); }
 .training-attendance.is-no-show { color: #fca5a5; background: rgba(239,68,68,0.15); }
 .training-detail-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }

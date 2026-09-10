@@ -420,8 +420,14 @@ const _appTrainingGroups = {
         const rows = participants.map(item => {
             const name = item.user ? `${item.user.nombre} ${item.user.apellidos}` : `Registro ${item.meta.recordId}`;
             const attendance = item.meta.attendanceStatus || 'Pendiente';
-            const attendanceClass = attendance === 'Asistió' ? 'is-attended' : attendance === 'No presentado' ? 'is-no-show' : '';
-            return `<div class="training-detail-person"><div><div class="training-participant-name"><strong>${this.escapeHtml(name)}</strong>${this.getCommercialEmailCopyButton(item.user)}</div><small>${this.escapeHtml(item.user?.concesionario || '')} · ${this.escapeHtml(item.user?.email || '')}</small></div><span class="training-attendance ${attendanceClass}">${this.escapeHtml(attendance)}</span></div>`;
+            const participantStatus = session.status === 'Realizada'
+                ? (attendance === 'Asistió' ? 'Realizada' : 'No Realizada')
+                : session.status;
+            const statusClass = participantStatus === 'Realizada' ? 'is-attended'
+                : participantStatus === 'No Realizada' ? 'is-no-show'
+                    : participantStatus === 'Confirmada' ? 'is-confirmed'
+                        : participantStatus === 'Convocada' ? 'is-invited' : '';
+            return `<div class="training-detail-person"><div><div class="training-participant-name"><strong>${this.escapeHtml(name)}</strong>${this.getCommercialEmailCopyButton(item.user)}</div><small>${this.escapeHtml(item.user?.concesionario || '')} · ${this.escapeHtml(item.user?.email || '')}</small></div><span class="training-attendance ${statusClass}" title="Estado formativo del asesor">${this.escapeHtml(participantStatus)}</span></div>`;
         }).join('');
         Swal.fire({
             title: this.escapeHtml(session.title),

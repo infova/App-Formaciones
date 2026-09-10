@@ -42,6 +42,15 @@ function toIsoDateTime($value)
     return str_replace(' ', 'T', substr($value, 0, 16));
 }
 
+function participantTrainingStatus($sessionStatus, $attendanceStatus = null)
+{
+    if ($sessionStatus === 'Realizada') {
+        return $attendanceStatus === 'Asistió' ? 'Realizada' : 'No Realizada';
+    }
+    if ($sessionStatus === 'No Realizada') return 'No Realizada';
+    return $sessionStatus;
+}
+
 function sessionParticipants($pdo, $sessionId)
 {
     $stmt = $pdo->prepare("SELECT tsp.record_id, tsp.response_status, tsp.attendance_status, tsp.invited_at
@@ -104,21 +113,12 @@ function syncParticipantRecord($pdo, $recordId, $session, $participantStatus = n
     $formation['date'] = $session['scheduledAt'] ?: '';
     $formation['confirmedBy'] = $session['confirmedBy'] ?: null;
 
-    if ($session['status'] === 'Realizada') {
-        if ($participantStatus === 'Asistió') {
-            $formation['status'] = 'Realizada';
-            $formation['dateCompleted'] = $session['completedAt']
-                ? substr($session['completedAt'], 0, 10)
-                : date('Y-m-d');
-        } elseif ($participantStatus === 'No presentado') {
-            $formation['status'] = 'No Realizada';
-            unset($formation['dateCompleted']);
-        }
-    } elseif ($session['status'] === 'No Realizada') {
-        $formation['status'] = 'No Realizada';
-        unset($formation['dateCompleted']);
+    $formation['status'] = participantTrainingStatus($session['status'], $participantStatus);
+    if ($formation['status'] === 'Realizada') {
+        $formation['dateCompleted'] = $session['completedAt']
+            ? substr($session['completedAt'], 0, 10)
+            : date('Y-m-d');
     } else {
-        $formation['status'] = $session['status'];
         unset($formation['dateCompleted']);
     }
 
@@ -274,13 +274,14 @@ try {
             $markInvited ? 1 : 0, $id
         ]);
 
-        $updateParticipant = $pdo->prepare("UPDATE training_session_participants SET attendance_status=?, invited_at=CASE WHEN ? = 1 THEN NOW() ELSE invited_at END WHERE session_id=? AND record_id=?");
+        $updateParticipant = $pdo->prepare("UPDATE training_session_participants SET response_status=?, attendance_status=?, invited_at=CASE WHEN ? = 1 THEN NOW() ELSE invited_at END WHERE session_id=? AND record_id=?");
         foreach ($existing['participants'] as $participant) {
             $participantStatus = in_array($session['status'], ['Realizada', 'No Realizada'], true)
                 ? ($attendance[$participant['recordId']] ?? $participant['attendanceStatus'])
                 : 'Pendiente';
             if (!in_array($participantStatus, ['Asistió', 'No presentado'], true)) $participantStatus = 'Pendiente';
-            $updateParticipant->execute([$participantStatus, $markInvited ? 1 : 0, $id, $participant['recordId']]);
+            $trainingStatus = participantTrainingStatus($session['status'], $participantStatus);
+            $updateParticipant->execute([$trainingStatus, $participantStatus, $markInvited ? 1 : 0, $id, $participant['recordId']]);
             syncParticipantRecord($pdo, $participant['recordId'], $session, $participantStatus);
         }
         $pdo->commit();

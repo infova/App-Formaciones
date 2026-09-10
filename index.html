@@ -38,7 +38,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css?v=1.7.1">
+    <link rel="stylesheet" href="index.css?v=1.7.3">
 </head>
 
 <body class="h-screen flex overflow-hidden">
@@ -49,7 +49,7 @@
             <img src="img/logo_horizontal.png" alt="iDealer Onboarding" class="h-10 w-auto object-contain">
             <div class="flex items-center gap-2 whitespace-nowrap">
                 <h1 class="font-bold text-gray-400 text-[11px] tracking-wide">By CXSolutions <span
-                        class="text-indigo-400 font-bold ml-1">v.1.7.1</span></h1>
+                        class="text-indigo-400 font-bold ml-1">v.1.7.3</span></h1>
             </div>
         </div>
 
@@ -402,32 +402,32 @@
                         <button type="button" onclick="app.cancelTrainingSelection()" class="training-action-quiet">Cancelar</button>
                     </div>
                 </div>
-                <div class="kanban-wrapper flex gap-4 h-full" id="kanban-container">
+                <div class="kanban-wrapper flex gap-4" id="kanban-container">
                     <div class="kanban-column flex-1">
                         <div class="kanban-header text-slate-400 border-b-4 border-slate-500">PENDIENTE <span
                                 id="count-pendiente" class="text-[10px] bg-slate-700 px-2 rounded">0</span></div>
-                        <div id="col-pendiente" class="kanban-body h-full overflow-y-auto" data-status="Pendiente">
+                        <div id="col-pendiente" class="kanban-body overflow-y-auto" data-status="Pendiente">
                         </div>
                     </div>
                     <div class="kanban-column flex-1">
                         <div class="kanban-header text-amber-500 border-b-4 border-amber-500">CONVOCADA <span
                                 id="count-convocada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-convocada" class="kanban-body h-full overflow-y-auto" data-status="Convocada">
+                        <div id="col-convocada" class="kanban-body overflow-y-auto" data-status="Convocada">
                         </div>
                     </div>
                     <div class="kanban-column flex-1">
                         <div class="kanban-header text-indigo-400 border-b-4 border-indigo-400">CONFIRMADA <span
                                 id="count-confirmada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-confirmada" class="kanban-body h-full overflow-y-auto" data-status="Confirmada">
+                        <div id="col-confirmada" class="kanban-body overflow-y-auto" data-status="Confirmada">
                         </div>
                     </div>
                     <div class="kanban-column flex-1">
                         <div class="kanban-header text-emerald-400 border-b-4 border-emerald-400">REALIZADA <span
                                 id="count-realizada" class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-realizada" class="kanban-body h-full overflow-y-auto" data-status="Realizada">
+                        <div id="col-realizada" class="kanban-body overflow-y-auto" data-status="Realizada">
                         </div>
                     </div>
                     <div class="kanban-column flex-1 border-red-500/30">
@@ -435,7 +435,7 @@
                             realizados <span id="count-norealizada"
                                 class="text-[10px] bg-slate-700 px-2 rounded text-white">0</span>
                         </div>
-                        <div id="col-norealizada" class="kanban-body h-full overflow-y-auto" data-status="No Realizada">
+                        <div id="col-norealizada" class="kanban-body overflow-y-auto" data-status="No Realizada">
                         </div>
                     </div>
                 </div>
@@ -549,22 +549,22 @@
         </div>
     </main>
 
-    <script src="js/app-state.js?v=1.7.1"></script>
-    <script src="js/app-utils.js?v=1.7.1"></script>
-    <script src="js/app-api.js?v=1.7.1"></script>
-    <script src="js/app-nav.js?v=1.7.1"></script>
-    <script src="js/app-dashboard.js?v=1.7.1"></script>
-    <script src="js/app-training-groups.js?v=1.7.1"></script>
-    <script src="js/app-kanban.js?v=1.7.1"></script>
-    <script src="js/app-it.js?v=1.7.1"></script>
-    <script src="js/app-informes.js?v=1.7.1"></script>
-    <script src="js/app-modals.js?v=1.7.1"></script>
-    <script src="js/app-regions.js?v=1.7.1"></script>
-    <script src="js/app-admin.js?v=1.7.1"></script>
-    <script src="js/app-export.js?v=1.7.1"></script>
-    <script src="js/app-import.js?v=1.7.1"></script>
-    <script src="js/app-logs.js?v=1.7.1"></script>
-    <script src="js/app-init.js?v=1.7.1"></script>
+    <script src="js/app-state.js?v=1.7.3"></script>
+    <script src="js/app-utils.js?v=1.7.3"></script>
+    <script src="js/app-api.js?v=1.7.3"></script>
+    <script src="js/app-nav.js?v=1.7.3"></script>
+    <script src="js/app-dashboard.js?v=1.7.3"></script>
+    <script src="js/app-training-groups.js?v=1.7.3"></script>
+    <script src="js/app-kanban.js?v=1.7.3"></script>
+    <script src="js/app-it.js?v=1.7.3"></script>
+    <script src="js/app-informes.js?v=1.7.3"></script>
+    <script src="js/app-modals.js?v=1.7.3"></script>
+    <script src="js/app-regions.js?v=1.7.3"></script>
+    <script src="js/app-admin.js?v=1.7.3"></script>
+    <script src="js/app-export.js?v=1.7.3"></script>
+    <script src="js/app-import.js?v=1.7.3"></script>
+    <script src="js/app-logs.js?v=1.7.3"></script>
+    <script src="js/app-init.js?v=1.7.3"></script>
 </body>
 
 </html>
