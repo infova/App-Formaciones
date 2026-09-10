@@ -181,8 +181,16 @@ const _appNav = {
     },
 
     renderAll() {
-        this.year = document.getElementById('global-year').value;
-        this.month = document.getElementById('global-month').value;
+        const nextYear = document.getElementById('global-year').value;
+        const nextMonth = document.getElementById('global-month').value;
+        const nextTrainingFilterKey = `${nextYear}|${nextMonth}|${this.brand}|${this.regionFilter || ''}`;
+        if (this.trainingSelectionMode && this.trainingSelectionFilterKey && this.trainingSelectionFilterKey !== nextTrainingFilterKey) {
+            this.trainingSelectionMode = false;
+            this.selectedTrainingIds.clear();
+        }
+        this.trainingSelectionFilterKey = nextTrainingFilterKey;
+        this.year = nextYear;
+        this.month = nextMonth;
         this.updateSidebarStats();
         if (!document.getElementById('view-dashboard').classList.contains('hidden')) this.renderDashboard();
         if (!document.getElementById('view-informes').classList.contains('hidden')) this.renderInformes();

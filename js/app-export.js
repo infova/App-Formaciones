@@ -4,12 +4,12 @@ const _appExport = {
     exportCSV() {
         try {
             const data = this.getData();
-            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;TipoFormacion;Observaciones\n";
+            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;TipoFormacion;IdSesionGrupal;NombreSesionGrupal;Observaciones\n";
             data.forEach(u => {
                 const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
                 const fStatus = u.formacion?.status || 'Pendiente';
                 const fDate = u.formacion?.date || '';
-                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${u.tipoFormacion || ''};${obs}\n`;
+                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${u.tipoFormacion || ''};${u.formacion?.groupId || ''};${(u.formacion?.groupTitle || '').replace(/;/g, ',')};${obs}\n`;
             });
             const l = document.createElement("a");
             l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
@@ -48,12 +48,12 @@ const _appExport = {
 
             if (data.length === 0) return Swal.fire('Vacio', 'No hay registros en ese rango y criterio.', 'info');
 
-            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;TipoFormacion;Observaciones\n";
+            let csv = "\uFEFFID;FechaAlta;Marca;Nombre;Apellidos;Teléfono;Email;Concesionario;Tipo;S_N_Tablet;ComercialAnterior;Estado;FechaFormacion;F_Config_IT;TipoFormacion;IdSesionGrupal;NombreSesionGrupal;Observaciones\n";
             data.forEach(u => {
                 const obs = (u.observaciones || '').replace(/(\r\n|\n|\r)/gm, " ").replace(/;/g, ",");
                 const fStatus = u.formacion?.status || 'Pendiente';
                 const fDate = u.formacion?.date || '';
-                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${u.tipoFormacion || ''};${obs}\n`;
+                csv += `${u.id};${u.fechaAlta};${u.marca};${u.nombre};${u.apellidos};${u.telefono || ''};${u.email};${u.concesionario};${u.tipoAcceso};${u.tabletSN || u.serial || ''};${u.usuarioAnterior || ''};${fStatus};${fDate};${u.fechaConfig || ''};${u.tipoFormacion || ''};${u.formacion?.groupId || ''};${(u.formacion?.groupTitle || '').replace(/;/g, ',')};${obs}\n`;
             });
             const l = document.createElement('a');
             l.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
@@ -133,7 +133,7 @@ const _appExport = {
 
             let chartHtml = `
                 <div style="margin-bottom:30px; border:1px solid #ddd; padding:20px; background:#f9f9f9;">
-                    <h3 style="margin:0 0 15px 0; color:#333; text-align:center;">Evolución Anual (${targetYear})</h3>
+                    <h3 style="margin:0 0 15px 0; color:#333; text-align:center;">Evolución anual de asesores formados (${targetYear})</h3>
                     <table style="width:100%; height:150px; border-collapse:collapse; margin:0 auto;">
                         <tr style="height:120px; vertical-align:bottom;">`;
 
@@ -194,7 +194,7 @@ const _appExport = {
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:5px;">
                         <h3 style="margin-top:0; color:#334155;">Análisis Ejecutivo</h3>
                         <p style="font-size:14px; line-height:1.5;">
-                            El mes de <b>${monthName}</b> ha cerrado con <b>${monthlyCounts[targetMonth]} formaciones</b>.
+                            El mes de <b>${monthName}</b> ha cerrado con <b>${monthlyCounts[targetMonth]} asesores formados</b>.
                             <br><br>
                             ${avgIcon} Se sitúa ${avgText}.
                             <br>
@@ -243,13 +243,13 @@ const _appExport = {
                 <table style="width:50%;border-collapse:collapse;border:1px solid #000;">
                     <tr style="background:#334155;color:#fff;">
                         <th style="padding:5px;border:1px solid #000;">Mes</th>
-                        <th style="padding:5px;border:1px solid #000;">Nº Formaciones</th>
+                        <th style="padding:5px;border:1px solid #000;">Nº Asesores formados</th>
                     </tr>
                     ${summaryRows}
                 </table>
                 <br><hr>
                 <h2>Desglose Detallado (${monthName})</h2>
-                <p>Total Formaciones este mes: <b>${monthData.length}</b></p>
+                <p>Total asesores formados este mes: <b>${monthData.length}</b></p>
                 ${detailHtml}
                 ${trendHtml}
             </body></html>`;

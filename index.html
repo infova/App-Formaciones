@@ -38,7 +38,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="index.css?v=1.7.1">
 </head>
 
 <body class="h-screen flex overflow-hidden">
@@ -49,7 +49,7 @@
             <img src="img/logo_horizontal.png" alt="iDealer Onboarding" class="h-10 w-auto object-contain">
             <div class="flex items-center gap-2 whitespace-nowrap">
                 <h1 class="font-bold text-gray-400 text-[11px] tracking-wide">By CXSolutions <span
-                        class="text-indigo-400 font-bold ml-1">v.1.6</span></h1>
+                        class="text-indigo-400 font-bold ml-1">v.1.7.1</span></h1>
             </div>
         </div>
 
@@ -227,17 +227,17 @@
                         <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Cambios de titularidad
                         </p>
                     </div>
-                    <!-- Usuarios Formados -->
+                    <!-- Sesiones y asesores formados -->
                     <div
                         class="bg-sidebar p-4 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden h-28 flex flex-col justify-center items-center text-center">
                         <div
                             class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
                             <span class="material-icons-round text-[110px] text-emerald-400">school</span>
                         </div>
-                        <p class="text-emerald-400 text-[10px] font-bold uppercase relative z-10">Usuarios Formados
+                        <p class="text-emerald-400 text-[10px] font-bold uppercase relative z-10">Sesiones realizadas
                         </p>
                         <h3 class="text-3xl font-bold text-white relative z-10" id="res-formed">0</h3>
-                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10">Formaciones realizadas
+                        <p class="text-[9px] text-slate-500 uppercase font-bold relative z-10"><span id="res-advisors-formed">0</span> asesores formados
                         </p>
                     </div>
                 </div>
@@ -372,7 +372,15 @@
             <!-- VIEW KANBAN -->
             <div id="view-kanban" class="hidden h-full flex flex-col">
                 <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                    <h3 class="text-white font-bold text-lg">Gestión Formativa</h3>
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-white font-bold text-lg">Gestión Formativa</h3>
+                        <button id="btn-training-selection" type="button" onclick="app.toggleTrainingSelectionMode()"
+                            aria-pressed="false"
+                            class="training-selection-toggle">
+                            <span class="material-icons-round">group_add</span>
+                            <span class="selection-label">Seleccionar asesores</span>
+                        </button>
+                    </div>
                     <div class="flex gap-2">
                         <button onclick="app.openWordReport()"
                             class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow-lg flex items-center gap-2">
@@ -381,6 +389,17 @@
                         <input id="search-kanban" onkeyup="app.renderKanban()"
                             placeholder="Filtrar por nombre o concesionario..."
                             class="bg-slate-900 border border-slate-600 rounded-full px-4 py-1.5 text-xs text-white w-72 outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+                <div id="kanban-selection-bar" class="kanban-selection-bar hidden" role="status" aria-live="polite">
+                    <div class="kanban-selection-summary">
+                        <span class="material-icons-round">checklist</span>
+                        <div><strong id="training-selection-count">0 asesores seleccionados</strong><small>Solo se pueden agrupar tarjetas pendientes de la misma marca y país.</small></div>
+                    </div>
+                    <div class="kanban-selection-actions">
+                        <button id="btn-select-visible-training" type="button" onclick="app.selectAllVisibleTraining()" class="training-action-secondary"><span class="material-icons-round text-sm">select_all</span>Seleccionar visibles</button>
+                        <button id="btn-create-training-group" type="button" onclick="app.createTrainingGroup()" class="training-action-primary" disabled><span class="material-icons-round">groups</span>Crear formación grupal</button>
+                        <button type="button" onclick="app.cancelTrainingSelection()" class="training-action-quiet">Cancelar</button>
                     </div>
                 </div>
                 <div class="kanban-wrapper flex gap-4 h-full" id="kanban-container">
@@ -530,21 +549,22 @@
         </div>
     </main>
 
-    <script src="js/app-state.js"></script>
-    <script src="js/app-utils.js"></script>
-    <script src="js/app-api.js"></script>
-    <script src="js/app-nav.js"></script>
-    <script src="js/app-dashboard.js"></script>
-    <script src="js/app-kanban.js"></script>
-    <script src="js/app-it.js"></script>
-    <script src="js/app-informes.js"></script>
-    <script src="js/app-modals.js"></script>
-    <script src="js/app-regions.js"></script>
-    <script src="js/app-admin.js"></script>
-    <script src="js/app-export.js"></script>
-    <script src="js/app-import.js"></script>
-    <script src="js/app-logs.js"></script>
-    <script src="js/app-init.js"></script>
+    <script src="js/app-state.js?v=1.7.1"></script>
+    <script src="js/app-utils.js?v=1.7.1"></script>
+    <script src="js/app-api.js?v=1.7.1"></script>
+    <script src="js/app-nav.js?v=1.7.1"></script>
+    <script src="js/app-dashboard.js?v=1.7.1"></script>
+    <script src="js/app-training-groups.js?v=1.7.1"></script>
+    <script src="js/app-kanban.js?v=1.7.1"></script>
+    <script src="js/app-it.js?v=1.7.1"></script>
+    <script src="js/app-informes.js?v=1.7.1"></script>
+    <script src="js/app-modals.js?v=1.7.1"></script>
+    <script src="js/app-regions.js?v=1.7.1"></script>
+    <script src="js/app-admin.js?v=1.7.1"></script>
+    <script src="js/app-export.js?v=1.7.1"></script>
+    <script src="js/app-import.js?v=1.7.1"></script>
+    <script src="js/app-logs.js?v=1.7.1"></script>
+    <script src="js/app-init.js?v=1.7.1"></script>
 </body>
 
 </html>

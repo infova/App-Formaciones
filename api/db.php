@@ -113,6 +113,54 @@ region VARCHAR(50) DEFAULT 'España'
         // Ignorar si la columna ya existe
     }
 
+    // Sesiones formativas: una sesión puede tener uno o varios participantes.
+    // Se mantiene records.data.formacion sincronizado para compatibilidad con
+    // el dashboard, informes y exportaciones existentes.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS training_sessions (
+id VARCHAR(40) PRIMARY KEY,
+client_id INT NULL,
+title VARCHAR(255) NOT NULL,
+training_type VARCHAR(100) DEFAULT 'Sesión Teams',
+status VARCHAR(50) DEFAULT 'Pendiente',
+scheduled_at DATETIME NULL,
+completed_at DATETIME NULL,
+confirmed_by VARCHAR(255) NULL,
+meeting_link VARCHAR(1000) NULL,
+location VARCHAR(500) NULL,
+duration_minutes INT DEFAULT 40,
+email_subject TEXT NULL,
+email_body TEXT NULL,
+invitation_sent_at DATETIME NULL,
+created_by VARCHAR(255) NULL,
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+INDEX idx_training_sessions_status (status),
+INDEX idx_training_sessions_client (client_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS training_session_participants (
+session_id VARCHAR(40) NOT NULL,
+record_id VARCHAR(255) NOT NULL,
+response_status VARCHAR(50) DEFAULT 'Pendiente',
+attendance_status VARCHAR(50) DEFAULT 'Pendiente',
+invited_at DATETIME NULL,
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (session_id, record_id),
+UNIQUE INDEX uq_training_participant_record (record_id),
+CONSTRAINT fk_training_participant_session FOREIGN KEY (session_id) REFERENCES training_sessions(id) ON DELETE CASCADE,
+CONSTRAINT fk_training_participant_record FOREIGN KEY (record_id) REFERENCES records(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    try {
+        $pdo->exec("ALTER TABLE training_session_participants ADD UNIQUE INDEX uq_training_participant_record (record_id)");
+    } catch (PDOException $e) {
+        // Ignorar si el índice ya existe.
+    }
+    try {
+        $pdo->exec("ALTER TABLE training_session_participants DROP INDEX idx_training_participant_record");
+    } catch (PDOException $e) {
+        // Ignorar en instalaciones nuevas o si ya fue eliminado.
+    }
+
     // Log de actividad de usuarios
     $pdo->exec("CREATE TABLE IF NOT EXISTS activity_log (
 id INT AUTO_INCREMENT PRIMARY KEY,

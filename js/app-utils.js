@@ -1,6 +1,30 @@
 // js/app-utils.js — Funciones puras de formateo, color y ordenamiento
 const _appUtils = {
 
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    },
+
+    escapeAttr(value) {
+        return this.escapeHtml(value).replace(/`/g, '&#096;');
+    },
+
+    uniqueTrainingUnits(records) {
+        const seen = new Set();
+        return records.filter(record => {
+            const groupId = record.formacion?.groupId;
+            const key = groupId ? `group:${groupId}` : `individual:${record.id}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    },
+
     hexToRgba(hex, alpha) {
         const r = parseInt(hex.slice(1, 3), 16),
               g = parseInt(hex.slice(3, 5), 16),

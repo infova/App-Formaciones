@@ -1,6 +1,10 @@
 // js/app-state.js — Estado inicial del objeto app
 const _appState = {
     db: [],
+    trainingSessions: [],
+    trainingSelectionMode: false,
+    selectedTrainingIds: new Set(),
+    trainingSelectionFilterKey: null,
     year: '2026',
     month: 'all',
     brand: 'all',

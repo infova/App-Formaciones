@@ -118,8 +118,10 @@ input[type="datetime-local"] {
 /* KANBAN LAYOUT */
 .kanban-wrapper {
     display: flex;
+    flex: 1 1 auto;
     gap: 0.8rem;
     height: 100%;
+    min-height: 0;
     width: 100%;
     padding-bottom: 0.5rem;
 }
@@ -177,6 +179,295 @@ input[type="datetime-local"] {
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
     z-index: 10;
+}
+
+.training-selection-toggle,
+.training-action-primary,
+.training-action-secondary,
+.training-action-danger,
+.training-action-quiet,
+.training-copy-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.1;
+    cursor: pointer;
+    transition: background-color 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out, opacity 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.training-selection-toggle {
+    color: #cbd5e1;
+    background: rgba(51, 65, 85, 0.7);
+    border: 1px solid rgba(100, 116, 139, 0.75);
+}
+
+.training-selection-toggle:hover,
+.training-selection-toggle.is-active {
+    color: #fff;
+    background: rgba(79, 70, 229, 0.9);
+    border-color: #818cf8;
+}
+
+.training-selection-toggle .material-icons-round,
+.training-action-primary .material-icons-round,
+.training-action-secondary .material-icons-round,
+.training-action-danger .material-icons-round,
+.training-copy-button .material-icons-round {
+    font-size: 1.1rem;
+}
+
+.training-selection-toggle:focus-visible,
+.training-action-primary:focus-visible,
+.training-action-secondary:focus-visible,
+.training-action-danger:focus-visible,
+.training-action-quiet:focus-visible,
+.training-copy-button:focus-visible,
+.kanban-card[tabindex="0"]:focus-visible {
+    outline: 3px solid #a5b4fc;
+    outline-offset: 2px;
+}
+
+.kanban-selection-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: -0.25rem 0 0.8rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(99, 102, 241, 0.55);
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, rgba(67, 56, 202, 0.23), rgba(15, 23, 42, 0.92));
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+}
+
+.kanban-selection-bar.hidden { display: none; }
+
+.kanban-selection-summary,
+.kanban-selection-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.kanban-selection-summary > .material-icons-round { color: #a5b4fc; }
+.kanban-selection-summary div { display: flex; flex-direction: column; text-align: left; }
+.kanban-selection-summary strong { color: #fff; font-size: 0.78rem; }
+.kanban-selection-summary small { color: #94a3b8; font-size: 0.63rem; margin-top: 0.15rem; }
+
+.training-action-primary { color: #fff; background: #4f46e5; border: 1px solid #6366f1; }
+.training-action-primary:hover { background: #6366f1; }
+.training-action-secondary { color: #e2e8f0; background: #334155; border: 1px solid #475569; }
+.training-action-secondary:hover { color: #fff; background: #475569; }
+.training-action-danger { color: #fecaca; background: rgba(127, 29, 29, 0.28); border: 1px solid rgba(239, 68, 68, 0.48); }
+.training-action-danger:hover { color: #fff; background: rgba(185, 28, 28, 0.58); }
+.training-action-quiet { color: #cbd5e1; background: transparent; border: 1px solid transparent; }
+.training-action-quiet:hover { color: #fff; background: rgba(51, 65, 85, 0.7); }
+.training-action-primary:disabled,
+.training-action-secondary:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.kanban-card.is-selectable { cursor: pointer; padding-left: 3rem !important; }
+.kanban-card.is-selected {
+    outline: 2px solid #818cf8;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18), 0 12px 28px rgba(15, 23, 42, 0.35);
+}
+
+.training-card-checkbox {
+    position: absolute;
+    top: 0.45rem;
+    left: 0.45rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.55rem;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.82);
+    border: 1px solid #64748b;
+}
+
+.training-card-checkbox .material-icons-round { font-size: 1.15rem; }
+.kanban-card.is-selected .training-card-checkbox { color: #fff; background: #4f46e5; border-color: #a5b4fc; }
+
+.kanban-group-card {
+    border-left-width: 4px;
+    cursor: grab;
+    overflow: hidden;
+}
+
+.kanban-group-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(120deg, rgba(255,255,255,0.045), transparent 45%);
+}
+
+.training-group-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.18rem 0.38rem;
+    border-radius: 999px;
+    color: #c7d2fe;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(129, 140, 248, 0.38);
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.training-group-label .material-icons-round { font-size: 0.72rem; }
+.training-group-title { margin-top: 0.45rem; color: #fff; font-size: 0.75rem; font-weight: 800; line-height: 1.25; }
+.training-group-stats { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+.training-group-stats span { display: inline-flex; align-items: center; gap: 0.2rem; color: #cbd5e1; font-size: 0.58rem; }
+.training-group-stats .material-icons-round { font-size: 0.75rem; color: #94a3b8; }
+.training-group-schedule { margin-top: 0.55rem; padding-top: 0.5rem; border-top: 1px solid rgba(100,116,139,0.35); color: #e2e8f0; font-size: 0.64rem; font-weight: 650; }
+.training-group-footer { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 0.45rem; margin-top: 0.55rem; }
+.training-group-footer button { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.5rem; color: #cbd5e1; background: rgba(51,65,85,0.68); border: 1px solid rgba(100,116,139,0.45); }
+.training-group-footer button:hover { color: #fff; background: #475569; }
+.training-group-footer button:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+.training-group-owner { min-width: 1.65rem; height: 1.65rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.45rem; color: #fff; font-size: 0.56rem; font-weight: 800; text-transform: uppercase; }
+.training-group-result { display: flex; gap: 0.35rem; margin-top: 0.45rem; }
+.training-group-result span { padding: 0.2rem 0.38rem; border-radius: 0.35rem; font-size: 0.55rem; font-weight: 700; }
+.training-group-result .attended { color: #6ee7b7; background: rgba(16,185,129,0.14); }
+.training-group-result .no-show { color: #fca5a5; background: rgba(239,68,68,0.14); }
+
+/* Formularios y detalle de sesión dentro de SweetAlert */
+.training-form-layout,
+.training-detail,
+.training-email-preview,
+.training-attendance-form { color: #cbd5e1; text-align: left; }
+.training-form-layout { display: grid; gap: 0.75rem; max-height: 68vh; overflow-y: auto; padding: 0.15rem 0.3rem 0.15rem 0; }
+.training-form-section { padding: 0.8rem; border: 1px solid rgba(100,116,139,0.42); border-radius: 0.75rem; background: rgba(15,23,42,0.45); }
+.training-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.training-form-heading { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.65rem; }
+.training-form-heading-full { grid-column: 1 / -1; margin-bottom: 0; }
+.training-form-heading > .material-icons-round { color: #818cf8; }
+.training-form-heading div { display: flex; flex-direction: column; }
+.training-form-heading strong { color: #fff; font-size: 0.76rem; }
+.training-form-heading small { color: #94a3b8; font-size: 0.62rem; margin-top: 0.12rem; }
+.training-field { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; }
+.training-field-full { grid-column: 1 / -1; }
+.training-field > span,
+.training-email-preview label > span { color: #cbd5e1; font-size: 0.64rem; font-weight: 700; }
+.training-field .custom-field { min-height: 44px; }
+.training-email-body { min-height: 145px !important; resize: vertical; line-height: 1.45; }
+.training-participants-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; max-height: 180px; overflow-y: auto; }
+.training-participant-group { border-radius: 0.55rem; border: 1px solid rgba(100,116,139,0.32); overflow: hidden; }
+.training-participant-dealer { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0.55rem; color: #e2e8f0; background: rgba(51,65,85,0.65); font-size: 0.64rem; font-weight: 800; text-transform: uppercase; }
+.training-participant-dealer span { color: #a5b4fc; }
+.training-participant-row { display: flex; flex-direction: column; padding: 0.38rem 0.55rem; border-top: 1px solid rgba(100,116,139,0.2); }
+.training-participant-row > span,
+.training-participant-name > span { color: #f8fafc; font-size: 0.65rem; font-weight: 650; }
+.training-participant-row small { color: #94a3b8; font-size: 0.58rem; margin-top: 0.1rem; overflow-wrap: anywhere; }
+.training-participant-name { display: flex; align-items: center; justify-content: space-between; gap: 0.45rem; min-width: 0; }
+.training-participant-name > span,
+.training-participant-name > strong { min-width: 0; overflow-wrap: anywhere; }
+.training-email-copy {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: -0.2rem -0.2rem -0.2rem 0;
+    border-radius: 0.5rem;
+    color: #a5b4fc;
+    background: rgba(79,70,229,0.12);
+    border: 1px solid rgba(129,140,248,0.35);
+    cursor: pointer;
+    transition: background-color 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out;
+}
+.training-email-copy .material-icons-round { color: inherit; font-size: 1rem; font-weight: normal; }
+.training-email-copy:hover { color: #fff; background: #4f46e5; border-color: #818cf8; }
+.training-email-copy:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+.training-email-copy.is-copied { color: #d1fae5; background: rgba(5,150,105,0.35); border-color: #34d399; }
+.training-email-copy:disabled { opacity: 0.36; cursor: not-allowed; }
+
+.training-detail-summary { display: grid; grid-template-columns: 0.75fr 0.85fr 1.4fr; gap: 0.5rem; }
+.training-detail-summary > div { min-height: 78px; display: grid; grid-template-columns: auto 1fr; align-content: center; gap: 0.1rem 0.45rem; padding: 0.55rem; border-radius: 0.65rem; background: rgba(15,23,42,0.55); border: 1px solid rgba(100,116,139,0.32); }
+.training-detail-summary .material-icons-round { grid-row: 1 / 3; align-self: center; color: #818cf8; }
+.training-detail-summary strong { color: #fff; font-size: 0.76rem; line-height: 1.2; }
+.training-detail-summary small { color: #94a3b8; font-size: 0.58rem; }
+.training-result-strip { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+.training-result-strip span { flex: 1; padding: 0.42rem 0.55rem; border-radius: 0.5rem; text-align: center; font-size: 0.65rem; font-weight: 700; background: rgba(51,65,85,0.62); }
+.training-detail-meta { display: flex; flex-wrap: wrap; gap: 0.45rem 0.8rem; margin: 0.65rem 0; padding: 0.55rem; font-size: 0.64rem; }
+.training-detail-meta a { color: #67e8f9; text-decoration: underline; }
+.training-detail-list { max-height: 260px; overflow-y: auto; border: 1px solid rgba(100,116,139,0.32); border-radius: 0.65rem; }
+.training-detail-person { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; padding: 0.45rem 0.6rem; border-bottom: 1px solid rgba(100,116,139,0.22); }
+.training-detail-person:last-child { border-bottom: 0; }
+.training-detail-person > div { display: flex; flex-direction: column; min-width: 0; }
+.training-detail-person strong { color: #fff; font-size: 0.68rem; }
+.training-detail-person small { color: #94a3b8; font-size: 0.58rem; margin-top: 0.12rem; overflow-wrap: anywhere; }
+.training-attendance { flex-shrink: 0; padding: 0.25rem 0.4rem; border-radius: 0.4rem; color: #cbd5e1; background: rgba(100,116,139,0.2); font-size: 0.57rem; font-weight: 700; }
+.training-attendance.is-attended { color: #6ee7b7; background: rgba(16,185,129,0.15); }
+.training-attendance.is-no-show { color: #fca5a5; background: rgba(239,68,68,0.15); }
+.training-detail-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+
+.training-privacy-note { display: flex; align-items: center; gap: 0.55rem; padding: 0.65rem; margin-bottom: 0.7rem; border-radius: 0.6rem; color: #c7d2fe; background: rgba(79,70,229,0.14); border: 1px solid rgba(129,140,248,0.34); }
+.training-privacy-note > .material-icons-round { color: #a5b4fc; }
+.training-privacy-note div { display: flex; flex-direction: column; }
+.training-privacy-note strong { color: #e0e7ff; font-size: 0.7rem; }
+.training-privacy-note small { color: #a5b4fc; font-size: 0.6rem; margin-top: 0.12rem; }
+.training-email-preview p { margin: 0.45rem 0; font-size: 0.68rem; }
+.training-email-addresses { display: flex; flex-wrap: wrap; gap: 0.3rem; max-height: 90px; overflow-y: auto; margin-bottom: 0.65rem; }
+.training-email-addresses span { padding: 0.22rem 0.38rem; border-radius: 0.35rem; color: #cbd5e1; background: rgba(51,65,85,0.78); font-size: 0.58rem; }
+.training-email-preview label { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.55rem; }
+.training-email-preview label > div,
+.training-email-preview pre { margin: 0; padding: 0.55rem; border-radius: 0.5rem; color: #e2e8f0; background: rgba(15,23,42,0.58); border: 1px solid rgba(100,116,139,0.3); font-family: inherit; font-size: 0.65rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow-y: auto; }
+.training-copy-button { margin-top: 0.65rem; color: #cbd5e1; background: transparent; border: 1px solid #475569; }
+.training-copy-button:hover { color: #fff; background: #334155; }
+
+.training-attendance-form > p { color: #94a3b8; font-size: 0.68rem; margin-bottom: 0.6rem; }
+.training-attendance-form { display: grid; gap: 0.4rem; max-height: 55vh; overflow-y: auto; padding-right: 0.2rem; }
+.training-attendance-form label { min-height: 62px; display: grid; grid-template-columns: minmax(0, 1fr) 180px; align-items: center; gap: 0.7rem; padding: 0.5rem 0.6rem; border-radius: 0.6rem; background: rgba(15,23,42,0.48); border: 1px solid rgba(100,116,139,0.3); }
+.training-attendance-form label > div { display: flex; flex-direction: column; min-width: 0; }
+.training-attendance-form strong { color: #fff; font-size: 0.68rem; }
+.training-attendance-form small { color: #94a3b8; font-size: 0.58rem; margin-top: 0.15rem; }
+.training-attendance-form select { min-height: 44px; margin: 0; }
+
+body.light-mode .kanban-selection-bar { background: linear-gradient(135deg, rgba(224,231,255,0.95), rgba(255,255,255,0.98)); }
+body.light-mode .kanban-selection-summary strong { color: #1e293b; }
+body.light-mode .kanban-selection-summary small { color: #475569; }
+body.light-mode .training-selection-toggle { color: #334155; background: #fff; border-color: #cbd5e1; }
+body.light-mode .training-selection-toggle:hover,
+body.light-mode .training-selection-toggle.is-active { color: #fff; background: #4f46e5; border-color: #4f46e5; }
+body.light-mode .kanban-card.is-selected { outline-color: #4f46e5; }
+
+@media (max-width: 1180px) {
+    .kanban-selection-bar { align-items: flex-start; flex-direction: column; }
+    .kanban-selection-actions { width: 100%; flex-wrap: wrap; }
+}
+
+@media (max-width: 680px) {
+    .training-form-grid,
+    .training-participants-list,
+    .training-detail-summary { grid-template-columns: 1fr; }
+    .training-detail-summary > div { min-height: 64px; }
+    .training-attendance-form label { grid-template-columns: 1fr; }
+    .training-detail-actions > button,
+    .kanban-selection-actions > button { flex: 1 1 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kanban-card,
+    .training-selection-toggle,
+    .training-action-primary,
+    .training-action-secondary,
+    .training-action-danger,
+    .training-action-quiet { transition: none !important; }
 }
 
 .btn-active {

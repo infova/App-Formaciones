@@ -7,6 +7,7 @@ Object.assign(app,
     _appApi,
     _appNav,
     _appDashboard,
+    _appTrainingGroups,
     _appKanban,
     _appIT,
     _appInformes,
@@ -75,7 +76,12 @@ app.init = async function () {
         document.getElementById('export-end').value = end.toLocaleDateString('en-CA');
     }
 
-    await Promise.all([this.fetchData(), this.fetchClients(), this.fetchRegions()]);
+    await Promise.all([
+        this.fetchData(false),
+        this.fetchTrainingSessions(false),
+        this.fetchClients(),
+        this.fetchRegions()
+    ]);
 
     this.nav('dashboard');
     this.renderFilters();

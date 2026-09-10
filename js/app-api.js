@@ -30,14 +30,31 @@ const _appApi = {
         }
     },
 
-    async fetchData() {
+    async fetchData(render = true) {
         try {
             const res = await fetch('api/records.php');
             if (res.ok) {
                 this.db = await res.json();
-                this.renderAll();
+                if (render) this.renderAll();
             }
         } catch (e) { console.error(e); }
+    },
+
+    async fetchTrainingSessions(render = true) {
+        try {
+            const res = await fetch('api/training-sessions.php');
+            if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+            this.trainingSessions = await res.json();
+            if (render) this.renderAll();
+        } catch (e) {
+            console.error('Error fetching training sessions', e);
+            this.trainingSessions = [];
+        }
+    },
+
+    async refreshTrainingData() {
+        await Promise.all([this.fetchData(false), this.fetchTrainingSessions(false)]);
+        this.renderAll();
     },
 
     async apiCreate(record) {
@@ -63,6 +80,38 @@ const _appApi = {
 
     async apiDelete(id) {
         await fetch('api/records.php?id=' + id, { method: 'DELETE' });
+    },
+
+    async apiCreateTrainingSession(payload) {
+        const res = await fetch('api/training-sessions.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        let data = {};
+        try { data = await res.json(); } catch (e) {}
+        if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+        return data;
+    },
+
+    async apiUpdateTrainingSession(id, payload) {
+        const res = await fetch('api/training-sessions.php?id=' + encodeURIComponent(id), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        let data = {};
+        try { data = await res.json(); } catch (e) {}
+        if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+        return data;
+    },
+
+    async apiDeleteTrainingSession(id) {
+        const res = await fetch('api/training-sessions.php?id=' + encodeURIComponent(id), { method: 'DELETE' });
+        let data = {};
+        try { data = await res.json(); } catch (e) {}
+        if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+        return data;
     },
 
     async apiGetUsers() {

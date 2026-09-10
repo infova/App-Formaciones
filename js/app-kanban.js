@@ -8,20 +8,51 @@ const _appKanban = {
             if (el) el._sortable = new Sortable(el, {
                 group: 'kanban',
                 animation: 150,
+                disabled: this.trainingSelectionMode,
+                filter: 'button, a, input, select, textarea',
+                preventOnFilter: false,
                 onEnd: (evt) => app.handleKanbanDrop(evt)
             });
         });
     },
 
     renderKanban() {
-        const search = document.getElementById('search-kanban').value.toLowerCase();
+        const search = (document.getElementById('search-kanban')?.value || '').toLowerCase();
+        const activeSessionIds = new Set((this.trainingSessions || []).map(session => session.id));
         ['Pendiente', 'Convocada', 'Confirmada', 'Realizada', 'No Realizada'].forEach(s => {
             const idStr = s.toLowerCase().replace(/ /g, '');
             const col = document.getElementById('col-' + idStr);
             if (!col) return;
             col.innerHTML = '';
 
-            const users = this.getData().filter(u => u.reqFormacion && u.formacion.status === s && this.matchesSearch(u, search));
+            const visibleData = this.getData();
+            const users = visibleData.filter(u =>
+                u.reqFormacion &&
+                u.formacion.status === s &&
+                (!u.formacion?.groupId || !activeSessionIds.has(u.formacion.groupId)) &&
+                this.matchesSearch(u, search)
+            );
+
+            const sessions = (this.trainingSessions || []).filter(session => {
+                if (session.status !== s) return false;
+                const participants = this.getTrainingSessionParticipants(session);
+                const visibleParticipants = participants.filter(item =>
+                    item.user && visibleData.some(user => String(user.id) === String(item.user.id))
+                );
+                if (!visibleParticipants.length) return false;
+                if (!search) return true;
+                const haystack = JSON.stringify({
+                    title: session.title,
+                    trainingType: session.trainingType,
+                    participants: participants.map(item => item.user ? {
+                        nombre: item.user.nombre,
+                        apellidos: item.user.apellidos,
+                        concesionario: item.user.concesionario,
+                        email: item.user.email
+                    } : {})
+                }).toLowerCase();
+                return haystack.includes(search.trim());
+            }).sort((a, b) => new Date(a.scheduledAt || '9999-12-31T23:59:59') - new Date(b.scheduledAt || '9999-12-31T23:59:59'));
 
             users.sort((a, b) => {
                 const dateA = a.formacion.date || a.formacion.dateCompleted || '9999-12-31T23:59:59';
@@ -30,7 +61,12 @@ const _appKanban = {
             });
 
             const countEl = document.getElementById('count-' + idStr);
-            if (countEl) countEl.innerText = users.length;
+            if (countEl) {
+                countEl.innerText = users.length + sessions.length;
+                countEl.title = `${users.length + sessions.length} sesiones · ${users.length + sessions.reduce((sum, session) => sum + session.participants.length, 0)} asesores`;
+            }
+
+            sessions.forEach(session => col.appendChild(this.renderTrainingGroupCard(session)));
 
             users.forEach(u => {
                 const isRealizada = s === 'Realizada';
@@ -38,18 +74,30 @@ const _appKanban = {
 
                 const card = document.createElement('div');
                 const brandColor = this.getColorForBrand(u.marca);
-                card.className = 'kanban-card p-3 mb-2 rounded-lg border border-slate-700/60 shadow-md';
+                const isSelectable = this.trainingSelectionMode && s === 'Pendiente';
+                const isSelected = this.selectedTrainingIds.has(String(u.id));
+                card.className = `kanban-card p-3 mb-2 rounded-lg border border-slate-700/60 shadow-md${isSelectable ? ' is-selectable' : ''}${isSelected ? ' is-selected' : ''}`;
                 const isLight = document.body.classList.contains('light-mode');
                 card.style.borderLeftColor = brandColor;
                 card.style.background = isLight
                     ? `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.18)} 0%, rgba(255,255,255,0.88) 45%)`
                     : `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.25)} 0%, rgba(14,22,40,0.82) 45%)`;
                 card.setAttribute('data-id', u.id);
+                card.setAttribute('data-kind', 'user');
+                if (isSelectable) {
+                    card.setAttribute('role', 'checkbox');
+                    card.setAttribute('tabindex', '0');
+                    card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+                    card.setAttribute('aria-label', `Seleccionar a ${u.nombre} ${u.apellidos}`);
+                }
 
                 const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
+                const selectionControl = isSelectable
+                    ? `<span class="training-card-checkbox" aria-hidden="true"><span class="material-icons-round">${isSelected ? 'check_box' : 'check_box_outline_blank'}</span></span>`
+                    : '';
 
                 if (isRealizada) {
-                    card.innerHTML = `
+                    card.innerHTML = `${selectionControl}
                         <div class="flex justify-between items-center mb-0.5">
                             <h4 class="text-xs font-bold text-white truncate uppercase" style="max-width:65%">${u.nombre} ${u.apellidos}</h4>
                             <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded flex-shrink-0">${this.formatDateEU(u.formacion.date)}</span>
@@ -57,7 +105,7 @@ const _appKanban = {
                         <div class="text-[9px] text-slate-500 uppercase truncate">${u.concesionario || '—'}</div>
                         ${u.tipoFormacion ? `<div class="mt-0.5"><span class="text-[8px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-medium">${u.tipoFormacion}</span></div>` : ''}`;
                 } else if (isNoRealizada) {
-                    card.innerHTML = `
+                    card.innerHTML = `${selectionControl}
                         <div class="text-xs font-bold text-slate-300 uppercase truncate mb-1 line-through decoration-slate-500">${u.nombre} ${u.apellidos}</div>
                         <div class="text-[9px] text-slate-400 uppercase truncate mb-2">${u.concesionario}</div>
                         <div class="flex justify-between items-center border-t border-slate-700 pt-2">
@@ -68,33 +116,86 @@ const _appKanban = {
                             <span class="text-[9px] text-red-500/70 font-bold">No Presentado</span>
                         </div>`;
                 } else {
-                    card.innerHTML = `
+                    card.innerHTML = `${selectionControl}
                         <div class="text-xs font-bold text-white uppercase truncate mb-1">${u.nombre} ${u.apellidos}</div>
                         <div class="text-[9px] text-slate-400 uppercase truncate mb-1">${u.concesionario}</div>
                         ${u.tipoFormacion ? `<div class="mb-2"><span class="text-[8px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-medium">${u.tipoFormacion}</span></div>` : '<div class="mb-2"></div>'}
                         <div class="flex items-center justify-between gap-1 mb-2">
-                            <div class="flex gap-1">
+                            ${isSelectable ? `<div class="text-[9px] font-bold text-indigo-300">Pulsa para seleccionar</div>` : `<div class="flex gap-1">
                                 <button onclick="app.editUser('${u.id}')" class="text-slate-400 hover:text-white transition"><span class="material-icons-round text-sm">edit</span></button>
                                 <button onclick="event.stopPropagation(); app.sendEmail('${u.id}')" class="text-slate-400 hover:text-indigo-400 transition" title="Enviar Propuesta Formación"><span class="material-icons-round text-sm">mail</span></button>
                                 <button onclick="app.deleteUser('${u.id}')" class="text-slate-400 hover:text-red-400 transition"><span class="material-icons-round text-sm">delete</span></button>
-                            </div>
+                            </div>`}
                             <div class="inline-flex items-center justify-center px-1.5 py-0.5 rounded border border-indigo-500/40 text-[9px] font-bold text-indigo-300 bg-indigo-500/10 shadow-sm" title="Días desde el alta">${this.getDaysSince(u.fechaAlta) != null ? this.getDaysSince(u.fechaAlta) + 'd' : '-'}</div>
                             <div class="text-[10px] font-semibold text-slate-300 antialiased tracking-tight">${this.formatDateTimeEU(u.formacion.date || u.formacion.dateCompleted)}</div>
                         </div>
                         ${(s === 'Confirmada' || s === 'Convocada') ? `<div class="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg text-white uppercase tracking-tighter" style="background: ${this.getColorForString(assignee)}" title="Asignado por: ${assignee}">${this.getUserInitials(assignee)}</div>` : ''}
                         `;
                 }
+                if (isSelectable) {
+                    card.addEventListener('click', () => this.toggleTrainingSelection(u.id));
+                    card.addEventListener('keydown', event => this.handleTrainingSelectionKeydown(event, u.id));
+                }
                 col.appendChild(card);
             });
         });
+        this.updateTrainingSelectionToolbar();
         this.initKanban();
+    },
+
+    renderTrainingGroupCard(session) {
+        const participants = this.getTrainingSessionParticipants(session);
+        const users = participants.map(item => item.user).filter(Boolean);
+        const firstUser = users[0] || {};
+        const dealers = [...new Set(users.map(user => user.concesionario || 'Sin concesionario'))];
+        const brandColor = this.getColorForBrand(firstUser.marca || 'Formación');
+        const assignee = session.confirmedBy || (this.user?.username || 'User');
+        const attended = participants.filter(item => item.meta.attendanceStatus === 'Asistió').length;
+        const noShows = participants.filter(item => item.meta.attendanceStatus === 'No presentado').length;
+        const final = ['Realizada', 'No Realizada'].includes(session.status);
+        const safeId = this.escapeAttr(session.id);
+        const card = document.createElement('article');
+        card.className = 'kanban-card kanban-group-card p-3 mb-2 rounded-lg border border-indigo-500/40 shadow-md';
+        card.style.borderLeftColor = brandColor;
+        card.style.background = document.body.classList.contains('light-mode')
+            ? `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.2)} 0%, rgba(255,255,255,0.94) 48%)`
+            : `linear-gradient(135deg, ${this.hexToRgba(brandColor, 0.3)} 0%, rgba(20,25,53,0.92) 48%)`;
+        card.dataset.id = session.id;
+        card.dataset.kind = 'group';
+        card.setAttribute('aria-label', `${session.title}, formación grupal de ${participants.length} asesores`);
+        card.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+                <span class="training-group-label"><span class="material-icons-round">groups</span>GRUPAL</span>
+                ${session.invitationSentAt ? '<span class="text-[9px] text-emerald-300 font-bold" title="Convocatoria registrada">CORREO OK</span>' : '<span class="text-[9px] text-amber-300 font-bold">SIN ENVIAR</span>'}
+            </div>
+            <h4 class="training-group-title">${this.escapeHtml(session.title)}</h4>
+            <div class="training-group-stats">
+                <span><span class="material-icons-round">person</span>${participants.length} asesores</span>
+                <span><span class="material-icons-round">storefront</span>${dealers.length} concesionario${dealers.length === 1 ? '' : 's'}</span>
+            </div>
+            <div class="training-group-schedule">${this.escapeHtml(this.formatDateTimeEU(session.scheduledAt) || 'Sin fecha')} · ${this.escapeHtml(session.trainingType || '')}</div>
+            ${final ? `<div class="training-group-result"><span class="attended">${attended} asistieron</span><span class="no-show">${noShows} no presentados</span></div>` : ''}
+            <div class="training-group-footer">
+                <div class="flex gap-1">
+                    <button type="button" onclick="event.stopPropagation(); app.openTrainingGroupDetails('${safeId}')" title="Ver detalle" aria-label="Ver detalle de la formación"><span class="material-icons-round text-sm">visibility</span></button>
+                    ${!final ? `<button type="button" onclick="event.stopPropagation(); app.openTrainingGroupEmail('${safeId}')" title="Preparar convocatoria" aria-label="Preparar convocatoria grupal"><span class="material-icons-round text-sm">mail</span></button>` : ''}
+                </div>
+                <span class="training-group-owner" style="background:${this.getColorForString(assignee)}" title="Responsable: ${this.escapeAttr(assignee)}">${this.escapeHtml(this.getUserInitials(assignee))}</span>
+            </div>`;
+        return card;
     },
 
     async handleKanbanDrop(evt) {
         const id = evt.item.getAttribute('data-id');
         const newStatus = evt.to.getAttribute('data-status');
+        if (evt.item.getAttribute('data-kind') === 'group') {
+            await app.handleTrainingGroupDrop(id, newStatus);
+            return;
+        }
         const u = app.db.find(x => x.id == id);
         if (!u) return;
+
+        const formacionBackup = JSON.parse(JSON.stringify(u.formacion));
 
         if (evt.from.id.includes('pendiente') && newStatus !== 'Pendiente') {
             const { value: d } = await Swal.fire({ title: 'Programar Cita', input: 'datetime-local', background: '#1e293b', color: '#fff' });
@@ -142,7 +243,6 @@ const _appKanban = {
             u.formacion.confirmedBy = null;
         }
 
-        const formacionBackup = JSON.parse(JSON.stringify(u.formacion));
         if (newStatus === 'Realizada') u.formacion.dateCompleted = new Date().toISOString().split('T')[0];
         u.formacion.status = newStatus;
         try {

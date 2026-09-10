@@ -45,7 +45,7 @@ const _appDashboard = {
         const sStr = document.getElementById('range-start').value;
         const eStr = document.getElementById('range-end').value;
 
-        let cnf = 0, frm = 0;
+        let cnf = 0, frm = 0, trainedAdvisors = 0;
         let iPadOwnershipChanges = 0, newCloudLicenses = 0, infoAccess = 0;
 
         if (sStr && eStr) {
@@ -58,11 +58,14 @@ const _appDashboard = {
             infoAccess = data.filter(u => u.tipoAcceso === 'Acceso a informes' && new Date(u.fechaAlta) >= s && new Date(u.fechaAlta) <= e).length;
 
             cnf = data.filter(u => u.reqConfig && u.fechaConfig && new Date(u.fechaConfig) >= s && new Date(u.fechaConfig) <= e).length;
-            frm = data.filter(u => u.reqFormacion && u.formacion.status === 'Realizada' && new Date(u.formacion.dateCompleted || u.formacion.date) >= s && new Date(u.formacion.dateCompleted || u.formacion.date) <= e).length;
+            const completedInRange = data.filter(u => u.reqFormacion && u.formacion.status === 'Realizada' && new Date(u.formacion.dateCompleted || u.formacion.date) >= s && new Date(u.formacion.dateCompleted || u.formacion.date) <= e);
+            frm = this.uniqueTrainingUnits(completedInRange).length;
+            trainedAdvisors = completedInRange.length;
         }
 
         document.getElementById('res-config').innerText = cnf;
         document.getElementById('res-formed').innerText = frm;
+        document.getElementById('res-advisors-formed').innerText = trainedAdvisors;
         document.getElementById('kpi-it').innerText = data.filter(u => u.reqConfig && !u.fechaConfig).length;
         document.getElementById('kpi-train-pending').innerText = data.filter(u => u.reqFormacion && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').length;
 
@@ -124,9 +127,10 @@ const _appDashboard = {
             }
         });
 
-        const sch = data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date));
+        const sch = this.uniqueTrainingUnits(data.filter(u => u.formacion.date && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada')).sort((a, b) => new Date(a.formacion.date) - new Date(b.formacion.date));
         const isLightAgenda = document.body.classList.contains('light-mode');
         document.getElementById('list-agenda').innerHTML = sch.map(u => {
+            const group = u.formacion?.groupId ? this.getTrainingSession(u.formacion.groupId) : null;
             const assignee = u.formacion.confirmedBy || (app.user ? app.user.username : 'User');
             const brandColor = this.getColorForBrand(u.marca);
             const gradientBg = isLightAgenda
@@ -139,8 +143,8 @@ const _appDashboard = {
                     <small>${new Date(u.formacion.date).toLocaleString('es', { month: 'short' }).toUpperCase()}</small>
                 </div>
                 <div class="flex-1 truncate">
-                    <p class="text-white font-bold truncate uppercase">${u.nombre} ${u.apellidos}</p>
-                    <p class="text-slate-400 truncate uppercase">${u.marca}</p>
+                    <p class="text-white font-bold truncate uppercase">${group ? this.escapeHtml(group.title) : `${u.nombre} ${u.apellidos}`}</p>
+                    <p class="text-slate-400 truncate uppercase">${group ? `${group.participants.length} ASESORES · ${u.marca}` : u.marca}</p>
                 </div>
                 <div class="flex flex-col items-end gap-1">
                     <div class="text-indigo-300 font-bold antialiased text-[10px]">${this.getTimeFromDate(u.formacion.date)}</div>
@@ -157,7 +161,7 @@ const _appDashboard = {
         let ds = [];
 
         if (this.year === 'all') {
-            const allCompleted = this.db.filter(u => u.formacion && u.formacion.status === 'Realizada' && (u.formacion.dateCompleted || u.formacion.date));
+            const allCompleted = this.uniqueTrainingUnits(this.db.filter(u => u.formacion && u.formacion.status === 'Realizada' && (u.formacion.dateCompleted || u.formacion.date)));
             if (allCompleted.length > 0) {
                 const dates = allCompleted.map(u => new Date(u.formacion.dateCompleted || u.formacion.date));
                 let minDate = new Date(Math.min(...dates));
@@ -207,7 +211,7 @@ const _appDashboard = {
             }
         } else {
             labelsLine = [...monthsBase];
-            const yearData = this.db.filter(u => u.year == this.year && u.formacion.status === 'Realizada');
+            const yearData = this.uniqueTrainingUnits(this.db.filter(u => u.year == this.year && u.formacion.status === 'Realizada'));
 
             if (this.brand === 'all') {
                 brandsForChart.forEach(c => {
