@@ -6,6 +6,17 @@ require_once 'db.php';
 $pdo = getPDO();
 $method = $_SERVER['REQUEST_METHOD'];
 
+class TrainingSessionApiException extends RuntimeException
+{
+    public $httpStatus;
+
+    public function __construct($message, $httpStatus)
+    {
+        parent::__construct($message);
+        $this->httpStatus = $httpStatus;
+    }
+}
+
 function jsonResponse($payload, $status = 200)
 {
     http_response_code($status);
@@ -128,6 +139,26 @@ function syncParticipantRecord($pdo, $recordId, $session, $participantStatus = n
     $upd->execute([json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $recordId]);
 }
 
+function syncIndividualTrainingRecord($pdo, $recordId, $status, $scheduledAt, $confirmedBy, $trainingType)
+{
+    $stmt = $pdo->prepare("SELECT data FROM records WHERE id = ? FOR UPDATE");
+    $stmt->execute([$recordId]);
+    $row = $stmt->fetch();
+    if (!$row) throw new TrainingSessionApiException("El asesor '$recordId' ya no existe", 409);
+
+    $data = json_decode($row['data'], true) ?: [];
+    $formation = isset($data['formacion']) && is_array($data['formacion']) ? $data['formacion'] : [];
+    unset($formation['groupId'], $formation['groupTitle'], $formation['dateCompleted']);
+    $formation['status'] = $status;
+    $formation['date'] = $scheduledAt ?: '';
+    $formation['confirmedBy'] = $confirmedBy ?: null;
+    $data['formacion'] = $formation;
+    if ($trainingType !== '') $data['tipoFormacion'] = $trainingType;
+
+    $upd = $pdo->prepare("UPDATE records SET data = ? WHERE id = ?");
+    $upd->execute([json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $recordId]);
+}
+
 try {
     if ($method === 'GET') {
         $stmt = $pdo->query("SELECT * FROM training_sessions ORDER BY COALESCE(scheduled_at, '9999-12-31 23:59:59'), created_at");
@@ -222,9 +253,63 @@ try {
         if (!$existing) jsonResponse(['error' => 'La formación grupal no existe'], 404);
         $payload = requestPayload();
 
+        $participantActions = [];
+        $seenParticipantActions = [];
+        $rawParticipantActions = $payload['participantActions'] ?? [];
+        if (!is_array($rawParticipantActions)) jsonResponse(['error' => 'Las acciones de participantes no son válidas'], 422);
+        $existingParticipantIds = array_map(fn($participant) => (string)$participant['recordId'], $existing['participants']);
+        foreach ($rawParticipantActions as $rawAction) {
+            if (!is_array($rawAction)) jsonResponse(['error' => 'Una acción de participante no es válida'], 422);
+            $recordId = trim((string)($rawAction['recordId'] ?? ''));
+            $action = trim((string)($rawAction['action'] ?? ''));
+            if ($recordId === '' || !in_array($recordId, $existingParticipantIds, true)) {
+                jsonResponse(['error' => 'Uno de los asesores ya no pertenece a esta formación'], 409);
+            }
+            if (isset($seenParticipantActions[$recordId])) {
+                jsonResponse(['error' => 'No se puede desvincular dos veces al mismo asesor'], 422);
+            }
+            if (!in_array($action, ['pending', 'reschedule'], true)) {
+                jsonResponse(['error' => 'El destino elegido para el asesor no es válido'], 422);
+            }
+            $normalizedAction = ['recordId' => $recordId, 'action' => $action];
+            if ($action === 'reschedule') {
+                $scheduledAt = normalizeDateTime($rawAction['scheduledAt'] ?? null);
+                $confirmedBy = trim((string)($rawAction['confirmedBy'] ?? ''));
+                if (!$scheduledAt || $confirmedBy === '') {
+                    jsonResponse(['error' => 'Indica la nueva fecha, hora y responsable del asesor reagendado'], 422);
+                }
+                $normalizedAction['scheduledAt'] = toIsoDateTime($scheduledAt);
+                $normalizedAction['confirmedBy'] = $confirmedBy;
+            }
+            $participantActions['record:' . $recordId] = $normalizedAction;
+            $seenParticipantActions[$recordId] = true;
+        }
+        if ($participantActions && in_array($existing['status'], ['Realizada', 'No Realizada'], true)) {
+            jsonResponse(['error' => 'No se pueden desvincular asesores de una formación finalizada'], 409);
+        }
+
+        $participantIdsToAdd = [];
+        $seenParticipantIdsToAdd = [];
+        $rawParticipantIdsToAdd = $payload['participantIdsToAdd'] ?? [];
+        if (!is_array($rawParticipantIdsToAdd)) jsonResponse(['error' => 'Los asesores que se van a añadir no son válidos'], 422);
+        foreach ($rawParticipantIdsToAdd as $rawRecordId) {
+            $recordId = trim((string)$rawRecordId);
+            if ($recordId === '') jsonResponse(['error' => 'Uno de los asesores seleccionados no es válido'], 422);
+            if (isset($seenParticipantIdsToAdd[$recordId])) jsonResponse(['error' => 'No se puede añadir dos veces al mismo asesor'], 422);
+            if (in_array($recordId, $existingParticipantIds, true)) jsonResponse(['error' => 'Uno de los asesores ya pertenece a esta formación'], 409);
+            $participantIdsToAdd[] = $recordId;
+            $seenParticipantIdsToAdd[$recordId] = true;
+        }
+        if ($participantIdsToAdd && in_array($existing['status'], ['Realizada', 'No Realizada'], true)) {
+            jsonResponse(['error' => 'No se pueden añadir asesores a una formación finalizada'], 409);
+        }
+
         $allowedStatuses = ['Pendiente', 'Convocada', 'Confirmada', 'Realizada', 'No Realizada'];
         $status = $payload['status'] ?? $existing['status'];
         if (!in_array($status, $allowedStatuses, true)) jsonResponse(['error' => 'Estado de formación no válido'], 422);
+        if (($participantActions || $participantIdsToAdd) && in_array($status, ['Realizada', 'No Realizada'], true)) {
+            jsonResponse(['error' => 'Modifica los participantes antes de finalizar la formación'], 409);
+        }
 
         $session = $existing;
         foreach (['title', 'trainingType', 'confirmedBy', 'meetingLink', 'location', 'emailSubject', 'emailBody'] as $field) {
@@ -259,33 +344,184 @@ try {
         }
 
         $markInvited = !empty($payload['markInvited']);
+        $resetInvitation = !empty($participantIdsToAdd);
         $scheduledDb = normalizeDateTime($session['scheduledAt']);
         $completedDb = normalizeDateTime($session['completedAt']);
 
         $pdo->beginTransaction();
+        $lockSession = $pdo->prepare("SELECT status, client_id FROM training_sessions WHERE id = ? FOR UPDATE");
+        $lockSession->execute([$id]);
+        $lockedSession = $lockSession->fetch();
+        if (!$lockedSession) throw new TrainingSessionApiException('La formación grupal ya no existe', 404);
+        if (($participantActions || $participantIdsToAdd) && in_array($lockedSession['status'], ['Realizada', 'No Realizada'], true)) {
+            throw new TrainingSessionApiException('No se pueden modificar los participantes de una formación finalizada', 409);
+        }
+
+        $lockParticipants = $pdo->prepare("SELECT record_id, response_status, attendance_status, invited_at FROM training_session_participants WHERE session_id = ? ORDER BY created_at, record_id FOR UPDATE");
+        $lockParticipants->execute([$id]);
+        $lockedParticipantRows = $lockParticipants->fetchAll();
+        $lockedParticipantIds = array_map('strval', array_column($lockedParticipantRows, 'record_id'));
+        foreach ($participantActions as $participantAction) {
+            $recordId = $participantAction['recordId'];
+            if (!in_array($recordId, $lockedParticipantIds, true)) {
+                throw new TrainingSessionApiException('Uno de los asesores ya no pertenece a esta formación', 409);
+            }
+        }
+        foreach ($participantIdsToAdd as $recordId) {
+            if (in_array($recordId, $lockedParticipantIds, true)) {
+                throw new TrainingSessionApiException('Uno de los asesores ya pertenece a esta formación', 409);
+            }
+        }
+
+        $detachedParticipantIds = array_map(fn($participantAction) => $participantAction['recordId'], array_values($participantActions));
+        $finalParticipantIds = array_values(array_unique(array_merge(
+            array_values(array_diff($lockedParticipantIds, $detachedParticipantIds)),
+            $participantIdsToAdd
+        )));
+
+        if ($participantIdsToAdd) {
+            $recordIdsToLock = array_values(array_unique(array_merge($lockedParticipantIds, $participantIdsToAdd)));
+            sort($recordIdsToLock, SORT_STRING);
+            $recordPlaceholders = implode(',', array_fill(0, count($recordIdsToLock), '?'));
+            $recordStmt = $pdo->prepare("SELECT id, client_id, marca, email, data FROM records WHERE id IN ($recordPlaceholders) ORDER BY id FOR UPDATE");
+            $recordStmt->execute($recordIdsToLock);
+            $recordsById = [];
+            foreach ($recordStmt->fetchAll() as $record) $recordsById[(string)$record['id']] = $record;
+
+            foreach ($participantIdsToAdd as $recordId) {
+                if (!isset($recordsById[$recordId])) {
+                    throw new TrainingSessionApiException('Uno de los asesores seleccionados ya no existe', 409);
+                }
+                $recordData = json_decode($recordsById[$recordId]['data'], true) ?: [];
+                $formation = isset($recordData['formacion']) && is_array($recordData['formacion']) ? $recordData['formacion'] : [];
+                if (!empty($formation['groupId'])) {
+                    throw new TrainingSessionApiException('Uno de los asesores ya pertenece a otra formación grupal', 409);
+                }
+                if (($formation['status'] ?? 'Pendiente') !== 'Pendiente' || empty($recordData['reqFormacion'])) {
+                    throw new TrainingSessionApiException('Solo se pueden añadir asesores pendientes de formación', 409);
+                }
+            }
+
+            $clientIds = [];
+            $brands = [];
+            foreach ($finalParticipantIds as $recordId) {
+                if (!isset($recordsById[$recordId])) {
+                    throw new TrainingSessionApiException('No se pudo validar la composición final del grupo', 409);
+                }
+                $record = $recordsById[$recordId];
+                $recordData = json_decode($record['data'], true) ?: [];
+                if ($record['client_id'] !== null) $clientIds[(string)$record['client_id']] = true;
+                $brand = trim((string)($record['marca'] ?: ($recordData['marca'] ?? '')));
+                if ($brand !== '') $brands[mb_strtolower($brand)] = true;
+            }
+            if (count($clientIds) > 1 || count($brands) > 1) {
+                throw new TrainingSessionApiException('Los asesores deben pertenecer a la misma marca y país', 422);
+            }
+        }
+        if ($session['status'] === 'Realizada') {
+            foreach ($lockedParticipantIds as $recordId) {
+                $value = $attendance[$recordId] ?? null;
+                if (!in_array($value, ['Asistió', 'No presentado'], true)) {
+                    throw new TrainingSessionApiException('Debes indicar la asistencia de todos los participantes', 422);
+                }
+            }
+        }
+
         $stmt = $pdo->prepare("UPDATE training_sessions SET
             title=?, training_type=?, status=?, scheduled_at=?, completed_at=?, confirmed_by=?, meeting_link=?, location=?,
-            duration_minutes=?, email_subject=?, email_body=?, invitation_sent_at=CASE WHEN ? = 1 THEN NOW() ELSE invitation_sent_at END
+            duration_minutes=?, email_subject=?, email_body=?, invitation_sent_at=CASE WHEN ? = 1 THEN NULL WHEN ? = 1 THEN NOW() ELSE invitation_sent_at END
             WHERE id=?");
         $stmt->execute([
             $session['title'], $session['trainingType'], $session['status'], $scheduledDb, $completedDb,
             $session['confirmedBy'] ?: null, $session['meetingLink'] ?: null, $session['location'] ?: null,
             $session['durationMinutes'], $session['emailSubject'] ?: null, $session['emailBody'] ?: null,
-            $markInvited ? 1 : 0, $id
+            $resetInvitation ? 1 : 0, $markInvited ? 1 : 0, $id
         ]);
 
-        $updateParticipant = $pdo->prepare("UPDATE training_session_participants SET response_status=?, attendance_status=?, invited_at=CASE WHEN ? = 1 THEN NOW() ELSE invited_at END WHERE session_id=? AND record_id=?");
-        foreach ($existing['participants'] as $participant) {
+        $updateParticipant = $pdo->prepare("UPDATE training_session_participants SET response_status=?, attendance_status=?, invited_at=CASE WHEN ? = 1 THEN NULL WHEN ? = 1 THEN NOW() ELSE invited_at END WHERE session_id=? AND record_id=?");
+        foreach ($lockedParticipantRows as $participantRow) {
+            $participant = [
+                'recordId' => (string)$participantRow['record_id'],
+                'attendanceStatus' => $participantRow['attendance_status'] ?: 'Pendiente'
+            ];
+            if (isset($participantActions['record:' . $participant['recordId']])) continue;
             $participantStatus = in_array($session['status'], ['Realizada', 'No Realizada'], true)
                 ? ($attendance[$participant['recordId']] ?? $participant['attendanceStatus'])
                 : 'Pendiente';
             if (!in_array($participantStatus, ['Asistió', 'No presentado'], true)) $participantStatus = 'Pendiente';
             $trainingStatus = participantTrainingStatus($session['status'], $participantStatus);
-            $updateParticipant->execute([$trainingStatus, $participantStatus, $markInvited ? 1 : 0, $id, $participant['recordId']]);
+            $updateParticipant->execute([$trainingStatus, $participantStatus, $resetInvitation ? 1 : 0, $markInvited ? 1 : 0, $id, $participant['recordId']]);
             syncParticipantRecord($pdo, $participant['recordId'], $session, $participantStatus);
         }
+
+        $detached = [];
+        $deleteParticipant = $pdo->prepare("DELETE FROM training_session_participants WHERE session_id = ? AND record_id = ?");
+        foreach ($participantActions as $participantAction) {
+            $recordId = $participantAction['recordId'];
+            if ($participantAction['action'] === 'pending') {
+                syncIndividualTrainingRecord($pdo, $recordId, 'Pendiente', '', null, $session['trainingType']);
+            } else {
+                syncIndividualTrainingRecord(
+                    $pdo,
+                    $recordId,
+                    'Convocada',
+                    $participantAction['scheduledAt'],
+                    $participantAction['confirmedBy'],
+                    $session['trainingType']
+                );
+            }
+            $deleteParticipant->execute([$id, $recordId]);
+            $detached[] = $participantAction;
+        }
+
+        $insertParticipant = $pdo->prepare("INSERT INTO training_session_participants
+            (session_id, record_id, response_status, attendance_status, invited_at)
+            VALUES (?, ?, ?, 'Pendiente', NULL)");
+        foreach ($participantIdsToAdd as $recordId) {
+            try {
+                $insertParticipant->execute([
+                    $id,
+                    $recordId,
+                    participantTrainingStatus($session['status'], 'Pendiente')
+                ]);
+            } catch (PDOException $e) {
+                if ($e->getCode() === '23000') {
+                    throw new TrainingSessionApiException('Uno de los asesores ya pertenece a otra formación grupal', 409);
+                }
+                throw $e;
+            }
+            syncParticipantRecord($pdo, $recordId, $session, 'Pendiente');
+        }
+
+        $membershipChanged = !empty($participantActions) || !empty($participantIdsToAdd);
+        $remainingParticipantIds = $finalParticipantIds;
+        $convertedRecordId = null;
+        $sessionDissolved = false;
+        if (count($remainingParticipantIds) === 1 && $membershipChanged) {
+            $convertedRecordId = $remainingParticipantIds[0];
+            syncIndividualTrainingRecord(
+                $pdo,
+                $convertedRecordId,
+                $session['status'],
+                $session['scheduledAt'],
+                $session['confirmedBy'],
+                $session['trainingType']
+            );
+            $deleteSession = $pdo->prepare("DELETE FROM training_sessions WHERE id = ?");
+            $deleteSession->execute([$id]);
+            $sessionDissolved = true;
+        } elseif (count($remainingParticipantIds) === 0 && $membershipChanged) {
+            $deleteSession = $pdo->prepare("DELETE FROM training_sessions WHERE id = ?");
+            $deleteSession->execute([$id]);
+            $sessionDissolved = true;
+        }
         $pdo->commit();
-        jsonResponse(findSession($pdo, $id));
+        jsonResponse([
+            'session' => $sessionDissolved ? null : findSession($pdo, $id),
+            'detached' => $detached,
+            'addedRecordIds' => $participantIdsToAdd,
+            'convertedRecordId' => $convertedRecordId
+        ]);
     }
 
     if ($method === 'DELETE') {
@@ -320,6 +556,9 @@ try {
     }
 
     jsonResponse(['error' => 'Método no permitido'], 405);
+} catch (TrainingSessionApiException $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    jsonResponse(['error' => $e->getMessage()], $e->httpStatus);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     jsonResponse(['error' => $e->getMessage()], 500);

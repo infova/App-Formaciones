@@ -45,27 +45,34 @@ const _appDashboard = {
         const sStr = document.getElementById('range-start').value;
         const eStr = document.getElementById('range-end').value;
 
-        let cnf = 0, frm = 0, trainedAdvisors = 0;
+        let cnf = 0, frm = 0, completedSessions = 0;
         let iPadOwnershipChanges = 0, newCloudLicenses = 0, infoAccess = 0;
 
+        let dashboardRange = null;
         if (sStr && eStr) {
-            const s = new Date(sStr);
-            const e = new Date(eStr);
-            e.setHours(23, 59, 59, 999);
+            try { dashboardRange = this.getInclusiveDateRange(sStr, eStr); } catch (e) { dashboardRange = null; }
+        }
+        if (dashboardRange) {
+            const { start: s, end: e } = dashboardRange;
+            const rangeData = this.getScopedData({ includePeriod: false });
 
-            iPadOwnershipChanges = data.filter(u => u.tipoAcceso === 'Tablet' && new Date(u.fechaAlta) >= s && new Date(u.fechaAlta) <= e).length;
-            newCloudLicenses = data.filter(u => u.tipoAcceso === 'Licencia Cloud' && new Date(u.fechaAlta) >= s && new Date(u.fechaAlta) <= e).length;
-            infoAccess = data.filter(u => u.tipoAcceso === 'Acceso a informes' && new Date(u.fechaAlta) >= s && new Date(u.fechaAlta) <= e).length;
+            iPadOwnershipChanges = rangeData.filter(u => u.tipoAcceso === 'Tablet' && this.isDateInRange(u.fechaAlta, s, e)).length;
+            newCloudLicenses = rangeData.filter(u => u.tipoAcceso === 'Licencia Cloud' && this.isDateInRange(u.fechaAlta, s, e)).length;
+            infoAccess = rangeData.filter(u => u.tipoAcceso === 'Acceso a informes' && this.isDateInRange(u.fechaAlta, s, e)).length;
 
-            cnf = data.filter(u => u.reqConfig && u.fechaConfig && new Date(u.fechaConfig) >= s && new Date(u.fechaConfig) <= e).length;
-            const completedInRange = data.filter(u => u.reqFormacion && u.formacion.status === 'Realizada' && new Date(u.formacion.dateCompleted || u.formacion.date) >= s && new Date(u.formacion.dateCompleted || u.formacion.date) <= e);
-            frm = this.uniqueTrainingUnits(completedInRange).length;
-            trainedAdvisors = completedInRange.length;
+            cnf = rangeData.filter(u => u.reqConfig && u.fechaConfig && this.isDateInRange(u.fechaConfig, s, e)).length;
+            const completedInRange = rangeData.filter(u =>
+                u.reqFormacion &&
+                u.formacion.status === 'Realizada' &&
+                this.isDateInRange(u.formacion.dateCompleted || u.formacion.date, s, e)
+            );
+            frm = completedInRange.length;
+            completedSessions = this.uniqueTrainingUnits(completedInRange).length;
         }
 
         document.getElementById('res-config').innerText = cnf;
         document.getElementById('res-formed').innerText = frm;
-        document.getElementById('res-advisors-formed').innerText = trainedAdvisors;
+        document.getElementById('res-training-sessions').innerText = completedSessions;
         document.getElementById('kpi-it').innerText = data.filter(u => u.reqConfig && !u.fechaConfig).length;
         document.getElementById('kpi-train-pending').innerText = data.filter(u => u.reqFormacion && u.formacion.status !== 'Realizada' && u.formacion.status !== 'No Realizada').length;
 
@@ -98,7 +105,7 @@ const _appDashboard = {
 
         // Filtrar marcas por región si hay filtro activo
         const brandsForChart = (this.brand === 'all' && this.regionFilter && this.clientRecords)
-            ? this.clientRecords.filter(c => c.region === this.regionFilter).map(c => c.name).filter(n => this.clients.includes(n))
+            ? this.clientRecords.filter(c => (c.region_name || c.region) === this.regionFilter).map(c => c.name).filter(n => this.clients.includes(n))
             : this.clients;
 
         if (this.chartBrands) this.chartBrands.destroy();
@@ -160,8 +167,12 @@ const _appDashboard = {
         let labelsLine = [];
         let ds = [];
 
+        const annualSource = this.getScopedData({ includePeriod: false }).filter(u =>
+            u.formacion && u.formacion.status === 'Realizada' && (u.formacion.dateCompleted || u.formacion.date)
+        );
+
         if (this.year === 'all') {
-            const allCompleted = this.uniqueTrainingUnits(this.db.filter(u => u.formacion && u.formacion.status === 'Realizada' && (u.formacion.dateCompleted || u.formacion.date)));
+            const allCompleted = annualSource;
             if (allCompleted.length > 0) {
                 const dates = allCompleted.map(u => new Date(u.formacion.dateCompleted || u.formacion.date));
                 let minDate = new Date(Math.min(...dates));
@@ -211,7 +222,10 @@ const _appDashboard = {
             }
         } else {
             labelsLine = [...monthsBase];
-            const yearData = this.uniqueTrainingUnits(this.db.filter(u => u.year == this.year && u.formacion.status === 'Realizada'));
+            const yearData = annualSource.filter(u => {
+                const date = this.parseLocalDate(u.formacion.dateCompleted || u.formacion.date);
+                return date && date.getFullYear() === Number(this.year);
+            });
 
             if (this.brand === 'all') {
                 brandsForChart.forEach(c => {

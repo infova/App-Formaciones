@@ -401,6 +401,83 @@ input[type="datetime-local"] {
 .training-email-copy.is-copied { color: #d1fae5; background: rgba(5,150,105,0.35); border-color: #34d399; }
 .training-email-copy:disabled { opacity: 0.36; cursor: not-allowed; }
 
+div:where(.swal2-container) div:where(.swal2-popup).training-group-modal { width: min(840px, calc(100vw - 24px)) !important; }
+.training-participant-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.65rem; }
+.training-participant-section-heading .training-form-heading { margin-bottom: 0; }
+.training-add-toggle {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.5rem;
+    color: #c7d2fe;
+    background: rgba(79,70,229,0.16);
+    border: 1px solid rgba(129,140,248,0.42);
+    font-size: 0.62rem;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background-color 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out;
+}
+.training-add-toggle .material-icons-round { font-size: 1rem; }
+.training-add-toggle:hover,
+.training-add-toggle.is-active { color: #fff; background: #4f46e5; border-color: #818cf8; }
+.training-add-toggle:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+.training-add-toggle:disabled { opacity: 0.42; cursor: not-allowed; background: rgba(51,65,85,0.35); border-color: rgba(100,116,139,0.35); }
+.training-add-count { min-width: 1.25rem; height: 1.25rem; display: inline-flex; align-items: center; justify-content: center; padding: 0 0.3rem; border-radius: 999px; color: #fff; background: rgba(15,23,42,0.7); font-size: 0.58rem; }
+.training-add-picker { margin-bottom: 0.65rem; padding: 0.7rem; border-radius: 0.65rem; border: 1px solid rgba(129,140,248,0.4); background: rgba(49,46,129,0.12); }
+.training-add-picker > label { display: block; margin-bottom: 0.35rem; color: #cbd5e1; font-size: 0.64rem; font-weight: 700; }
+.training-add-picker > small { display: block; margin-top: 0.5rem; color: #94a3b8; font-size: 0.58rem; line-height: 1.45; }
+.training-add-search-wrap { position: relative; margin-bottom: 0.55rem; }
+.training-add-search-wrap > .material-icons-round { position: absolute; left: 0.7rem; top: 50%; z-index: 1; transform: translateY(-50%); color: #818cf8; font-size: 1rem; pointer-events: none; }
+.training-add-search-wrap input { width: 100%; min-height: 44px; padding-left: 2.15rem; }
+.training-add-candidates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; max-height: 190px; overflow-y: auto; }
+.training-add-candidate { min-height: 58px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.55rem; padding: 0.5rem 0.6rem; border-radius: 0.55rem; color: #e2e8f0; background: rgba(15,23,42,0.56); border: 1px solid rgba(100,116,139,0.38); cursor: pointer; transition: background-color 180ms ease-out, border-color 180ms ease-out; }
+.training-add-candidate:hover { border-color: #818cf8; background: rgba(79,70,229,0.12); }
+.training-add-candidate:focus-within { outline: 3px solid #a5b4fc; outline-offset: 1px; }
+.training-add-candidate.is-selected { border-color: #34d399; background: rgba(5,150,105,0.16); }
+.training-add-candidate > input { width: 1.05rem; height: 1.05rem; accent-color: #10b981; }
+.training-add-candidate-copy { min-width: 0; display: flex; flex-direction: column; }
+.training-add-candidate-copy strong { color: #f8fafc; font-size: 0.66rem; overflow-wrap: anywhere; }
+.training-add-candidate-copy small { margin-top: 0.12rem; color: #94a3b8; font-size: 0.57rem; overflow-wrap: anywhere; }
+.training-add-check { color: #6ee7b7; font-size: 1rem; opacity: 0; transition: opacity 180ms ease-out; }
+.training-add-candidate.is-selected .training-add-check { opacity: 1; }
+.training-add-empty { padding: 0.8rem; border-radius: 0.5rem; color: #94a3b8; background: rgba(15,23,42,0.4); text-align: center; font-size: 0.64rem; }
+.training-participants-list.is-editable { grid-template-columns: 1fr; max-height: 320px; }
+.training-participant-editor { padding: 0.5rem 0.6rem; transition: background-color 180ms ease-out, border-color 180ms ease-out; }
+.training-participant-editor.is-detaching { background: rgba(127,29,29,0.14); box-shadow: inset 3px 0 0 #f87171; }
+.training-participant-summary { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; }
+.training-participant-identity { min-width: 0; flex: 1; }
+.training-detach-toggle {
+    min-width: 124px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(248,113,113,0.45);
+    color: #fecaca;
+    background: rgba(127,29,29,0.18);
+    font-size: 0.62rem;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background-color 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out;
+}
+.training-detach-toggle .material-icons-round { font-size: 1rem; }
+.training-detach-toggle:hover,
+.training-detach-toggle.is-active { color: #fff; background: rgba(220,38,38,0.72); border-color: #f87171; }
+.training-detach-toggle:focus-visible { outline: 3px solid #fca5a5; outline-offset: 2px; }
+.training-detach-panel { margin-top: 0.55rem; padding: 0.65rem; border-radius: 0.55rem; border: 1px solid rgba(248,113,113,0.3); background: rgba(15,23,42,0.62); }
+.training-detach-panel > p { margin: 0 0 0.5rem; color: #cbd5e1; font-size: 0.64rem; }
+.training-detach-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+.training-detach-options label { min-height: 44px; display: flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.55rem; border-radius: 0.5rem; border: 1px solid rgba(100,116,139,0.45); background: rgba(30,41,59,0.72); color: #e2e8f0; font-size: 0.64rem; cursor: pointer; }
+.training-detach-options input { width: 1rem; height: 1rem; accent-color: #6366f1; }
+.training-detach-options label:has(input:checked) { border-color: #818cf8; background: rgba(79,70,229,0.2); }
+.training-reschedule-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.55rem; }
+
 .training-detail-summary { display: grid; grid-template-columns: 0.75fr 0.85fr 1.4fr; gap: 0.5rem; }
 .training-detail-summary > div { min-height: 78px; display: grid; grid-template-columns: auto 1fr; align-content: center; gap: 0.1rem 0.45rem; padding: 0.55rem; border-radius: 0.65rem; background: rgba(15,23,42,0.55); border: 1px solid rgba(100,116,139,0.32); }
 .training-detail-summary .material-icons-round { grid-row: 1 / 3; align-self: center; color: #818cf8; }
@@ -452,6 +529,32 @@ body.light-mode .training-selection-toggle { color: #334155; background: #fff; b
 body.light-mode .training-selection-toggle:hover,
 body.light-mode .training-selection-toggle.is-active { color: #fff; background: #4f46e5; border-color: #4f46e5; }
 body.light-mode .kanban-card.is-selected { outline-color: #4f46e5; }
+body.light-mode .training-form-layout { color: #334155; }
+body.light-mode .training-form-section { background: rgba(248,250,252,0.88); border-color: #cbd5e1; }
+body.light-mode .training-form-heading strong,
+body.light-mode .training-participant-name > span { color: #1e293b; }
+body.light-mode .training-form-heading small,
+body.light-mode .training-participant-row small { color: #64748b; }
+body.light-mode .training-field > span { color: #334155; }
+body.light-mode .training-participant-group { border-color: #cbd5e1; }
+body.light-mode .training-participant-dealer { color: #334155; background: #e2e8f0; }
+body.light-mode .training-email-copy { color: #4338ca; background: #eef2ff; border-color: #a5b4fc; }
+body.light-mode .training-add-toggle { color: #3730a3; background: #eef2ff; border-color: #a5b4fc; }
+body.light-mode .training-add-toggle:hover,
+body.light-mode .training-add-toggle.is-active { color: #fff; background: #4f46e5; }
+body.light-mode .training-add-picker { background: #eef2ff; border-color: #a5b4fc; }
+body.light-mode .training-add-picker > label { color: #334155; }
+body.light-mode .training-add-picker > small { color: #475569; }
+body.light-mode .training-add-candidate { color: #334155; background: #fff; border-color: #cbd5e1; }
+body.light-mode .training-add-candidate-copy strong { color: #1e293b; }
+body.light-mode .training-add-candidate-copy small { color: #64748b; }
+body.light-mode .training-add-candidate.is-selected { background: #ecfdf5; border-color: #059669; }
+body.light-mode .training-add-empty { color: #475569; background: #f8fafc; }
+body.light-mode .training-participant-editor.is-detaching { background: #fff1f2; }
+body.light-mode .training-detach-panel { background: #fff; border-color: #fecaca; }
+body.light-mode .training-detach-panel > p { color: #475569; }
+body.light-mode .training-detach-options label { color: #334155; background: #f8fafc; border-color: #cbd5e1; }
+body.light-mode .training-detach-options label:has(input:checked) { color: #312e81; background: #eef2ff; border-color: #6366f1; }
 
 @media (max-width: 1180px) {
     .kanban-selection-bar { align-items: flex-start; flex-direction: column; }
@@ -464,6 +567,14 @@ body.light-mode .kanban-card.is-selected { outline-color: #4f46e5; }
     .training-detail-summary { grid-template-columns: 1fr; }
     .training-detail-summary > div { min-height: 64px; }
     .training-attendance-form label { grid-template-columns: 1fr; }
+    .training-participant-summary { align-items: stretch; flex-direction: column; }
+    .training-participant-section-heading { align-items: stretch; flex-direction: column; }
+    .training-add-toggle { width: 100%; }
+    .training-add-candidates { grid-template-columns: 1fr; max-height: none; overflow: visible; }
+    .training-participants-list.is-editable { max-height: none; overflow: visible; }
+    .training-detach-toggle { width: 100%; }
+    .training-detach-options,
+    .training-reschedule-fields { grid-template-columns: 1fr; }
     .training-detail-actions > button,
     .kanban-selection-actions > button { flex: 1 1 100%; }
 }
@@ -471,6 +582,11 @@ body.light-mode .kanban-card.is-selected { outline-color: #4f46e5; }
 @media (prefers-reduced-motion: reduce) {
     .kanban-card,
     .training-selection-toggle,
+    .training-participant-editor,
+    .training-add-toggle,
+    .training-add-candidate,
+    .training-add-check,
+    .training-detach-toggle,
     .training-action-primary,
     .training-action-secondary,
     .training-action-danger,

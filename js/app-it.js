@@ -162,21 +162,23 @@ const _appIT = {
 
     exportITCSV() {
         try {
-            const list = this.getData().filter(u => u.reqConfig === true && !u.isArchived);
+            const list = this.getScopedData({ includePeriod: false }).filter(u => u.reqConfig === true && !u.isArchived);
             const search = document.getElementById('search-it')?.value.toLowerCase() || '';
             const statusFilter = document.getElementById('filter-it-status')?.value || 'all';
             const startStr = document.getElementById('filter-it-start')?.value;
             const endStr = document.getElementById('filter-it-end')?.value;
+            const start = startStr ? this.parseLocalDate(startStr) : null;
+            const end = endStr ? this.parseLocalDate(endStr, true) : null;
+            if ((startStr && !start) || (endStr && !end)) throw new Error('El rango de fechas no es válido.');
+            if (start && end && start > end) throw new Error('La fecha inicial no puede ser posterior a la fecha final.');
 
             const data = list.filter(u => {
                 if (!this.matchesSearch(u, search, 'it')) return false;
                 if (statusFilter === 'pending' && u.fechaConfig) return false;
                 if (statusFilter === 'configured' && !u.fechaConfig) return false;
-                if (startStr || endStr) {
-                    const dateObj = new Date(u.fechaConfig || u.fechaAlta);
-                    if (startStr && dateObj < new Date(startStr)) return false;
-                    if (endStr) { const endD = new Date(endStr); endD.setHours(23, 59, 59, 999); if (dateObj > endD) return false; }
-                }
+                const dateObj = this.parseLocalDate(u.fechaConfig || u.fechaAlta);
+                if (start && (!dateObj || dateObj < start)) return false;
+                if (end && (!dateObj || dateObj > end)) return false;
                 return true;
             });
             if (data.length === 0) return Swal.fire('Vacio', 'No hay registros con ese criterio.', 'info');

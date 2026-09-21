@@ -146,13 +146,23 @@ const _appNav = {
         this.renderAll();
     },
 
-    getData() {
+    getScopedData({ includePeriod = true } = {}) {
         return this.db.filter(u => {
             if (this.user && this.user.region === 'Latam') {
                 if (!this.clients.includes(u.marca)) return false;
             }
-            const yearMatch = (this.year === 'all' || u.year === this.year);
             const brandMatch = this.matchesBrand(u);
+            let regionMatch = true;
+            if (this.regionFilter) {
+                const client = this.clientRecords.find(c =>
+                    (u.client_id && c.id == u.client_id) ||
+                    (!u.client_id && c.name === u.marca)
+                );
+                regionMatch = !!client && (client.region_name || client.region) === this.regionFilter;
+            }
+            if (!includePeriod) return brandMatch && regionMatch;
+
+            const yearMatch = (this.year === 'all' || String(u.year) === String(this.year));
             let monthMatch = true;
             if (this.month !== 'all') {
                 const targetDate = u.formacion.date || u.fechaAlta;
@@ -163,8 +173,12 @@ const _appNav = {
                     monthMatch = false;
                 }
             }
-            return yearMatch && brandMatch && monthMatch;
+            return yearMatch && brandMatch && regionMatch && monthMatch;
         });
+    },
+
+    getData() {
+        return this.getScopedData();
     },
 
     matchesSearch(u, search, context = 'all') {

@@ -187,6 +187,172 @@ const _appTrainingGroups = {
         }).join('');
     },
 
+    getEditableTrainingParticipantsModalHtml(participants, responsibleUsers, defaultResponsible) {
+        const dealers = [...new Set(participants.map(item => item.user?.concesionario || 'Sin concesionario'))];
+        let rowIndex = 0;
+        return dealers.map(dealer => {
+            const dealerParticipants = participants.filter(item => (item.user?.concesionario || 'Sin concesionario') === dealer);
+            return `<div class="training-participant-group">
+                <div class="training-participant-dealer">${this.escapeHtml(dealer)} <span>${dealerParticipants.length}</span></div>
+                ${dealerParticipants.map(item => {
+                    const index = rowIndex++;
+                    const user = item.user;
+                    const recordId = String(item.meta.recordId);
+                    const name = user ? `${user.nombre} ${user.apellidos}` : `Registro ${recordId}`;
+                    return `<div class="training-participant-row training-participant-editor" data-record-id="${this.escapeAttr(recordId)}" data-user-name="${this.escapeAttr(name)}">
+                        <div class="training-participant-summary">
+                            <div class="training-participant-identity">
+                                <div class="training-participant-name"><span>${this.escapeHtml(name)}</span>${this.getCommercialEmailCopyButton(user)}</div>
+                                <small>${this.escapeHtml(user?.email || 'Sin email')}</small>
+                            </div>
+                            <button type="button" class="training-detach-toggle" onclick="app.toggleTrainingParticipantDetach(this)" aria-expanded="false" aria-label="Desvincular a ${this.escapeAttr(name)}">
+                                <span class="material-icons-round">link_off</span><span>Desvincular</span>
+                            </button>
+                        </div>
+                        <div class="training-detach-panel" hidden>
+                            <p>Elige qué ocurrirá con este comercial al guardar.</p>
+                            <div class="training-detach-options" role="radiogroup" aria-label="Destino de ${this.escapeAttr(name)}">
+                                <label><input type="radio" name="tg-detach-${index}" value="pending" onchange="app.updateTrainingParticipantDetach(this.closest('[data-record-id]'))"><span>Volver a Pendiente</span></label>
+                                <label><input type="radio" name="tg-detach-${index}" value="reschedule" onchange="app.updateTrainingParticipantDetach(this.closest('[data-record-id]'))"><span>Reagendar individualmente</span></label>
+                            </div>
+                            <div class="training-reschedule-fields" hidden>
+                                <label class="training-field"><span>Nueva fecha y hora *</span><input type="datetime-local" class="custom-field" data-detach-date></label>
+                                <label class="training-field"><span>Responsable *</span><select class="custom-field" data-detach-responsible>${this.getResponsibleOptions(responsibleUsers, defaultResponsible)}</select></label>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }).join('');
+    },
+
+    toggleTrainingParticipantDetach(button) {
+        const row = button.closest('[data-record-id]');
+        const panel = row?.querySelector('.training-detach-panel');
+        if (!row || !panel) return;
+        const active = !row.classList.contains('is-detaching');
+        row.classList.toggle('is-detaching', active);
+        panel.hidden = !active;
+        button.setAttribute('aria-expanded', active ? 'true' : 'false');
+        button.classList.toggle('is-active', active);
+        button.innerHTML = active
+            ? '<span class="material-icons-round">undo</span><span>Deshacer</span>'
+            : '<span class="material-icons-round">link_off</span><span>Desvincular</span>';
+        if (active) {
+            const pending = row.querySelector('input[value="pending"]');
+            if (pending) pending.checked = true;
+        } else {
+            row.querySelectorAll('input[type="radio"]').forEach(input => { input.checked = false; });
+            const date = row.querySelector('[data-detach-date]');
+            if (date) date.value = '';
+        }
+        this.updateTrainingParticipantDetach(row);
+    },
+
+    updateTrainingParticipantDetach(row) {
+        if (!row) return;
+        const action = row.querySelector('input[type="radio"]:checked')?.value || '';
+        const fields = row.querySelector('.training-reschedule-fields');
+        if (fields) fields.hidden = action !== 'reschedule';
+    },
+
+    collectTrainingParticipantActions() {
+        const actions = [];
+        const rows = [...document.querySelectorAll('.training-participant-editor.is-detaching')];
+        for (const row of rows) {
+            const action = row.querySelector('input[type="radio"]:checked')?.value;
+            if (!action) return { error: `Elige el destino de ${row.dataset.userName}.`, field: row };
+            const item = { recordId: row.dataset.recordId, action };
+            if (action === 'reschedule') {
+                const dateField = row.querySelector('[data-detach-date]');
+                const responsibleField = row.querySelector('[data-detach-responsible]');
+                item.scheduledAt = dateField?.value || '';
+                item.confirmedBy = responsibleField?.value || '';
+                if (!item.scheduledAt || !item.confirmedBy) {
+                    return { error: `Indica fecha, hora y responsable para ${row.dataset.userName}.`, field: !item.scheduledAt ? dateField : responsibleField };
+                }
+            }
+            actions.push(item);
+        }
+        return { actions };
+    },
+
+    getTrainingGroupAddCandidates(session, participantItems) {
+        const participantIds = new Set(participantItems.map(item => String(item.meta.recordId)));
+        const currentUsers = participantItems.map(item => item.user).filter(Boolean);
+        const sessionClientId = session.clientId ?? currentUsers.find(user => user.client_id != null)?.client_id ?? null;
+        const sessionBrands = new Set(currentUsers.map(user => (user.marca || '').trim().toLowerCase()).filter(Boolean));
+
+        return this.getScopedData({ includePeriod: false }).filter(user => {
+            if (participantIds.has(String(user.id)) || user.isArchived || !user.reqFormacion) return false;
+            if ((user.formacion?.status || 'Pendiente') !== 'Pendiente' || user.formacion?.groupId) return false;
+            if (sessionClientId !== null && sessionClientId !== undefined && sessionClientId !== '') {
+                return String(user.client_id ?? '') === String(sessionClientId);
+            }
+            return sessionBrands.size === 0 || sessionBrands.has((user.marca || '').trim().toLowerCase());
+        }).sort((a, b) => {
+            const dealerCompare = (a.concesionario || '').localeCompare(b.concesionario || '', 'es');
+            if (dealerCompare !== 0) return dealerCompare;
+            return `${a.nombre || ''} ${a.apellidos || ''}`.localeCompare(`${b.nombre || ''} ${b.apellidos || ''}`, 'es');
+        });
+    },
+
+    getTrainingAddCandidatesHtml(candidates) {
+        if (!candidates.length) {
+            return '<div class="training-add-empty">No hay comerciales pendientes compatibles con esta formación.</div>';
+        }
+        return candidates.map(user => {
+            const name = `${user.nombre || ''} ${user.apellidos || ''}`.trim();
+            const searchText = `${name} ${user.concesionario || ''} ${user.email || ''}`.toLowerCase();
+            return `<label class="training-add-candidate" data-add-candidate-row data-search="${this.escapeAttr(searchText)}">
+                <input type="checkbox" value="${this.escapeAttr(String(user.id))}" data-add-participant onchange="app.updateTrainingAddSelection(this)">
+                <span class="training-add-candidate-copy">
+                    <strong>${this.escapeHtml(name)}</strong>
+                    <small>${this.escapeHtml(user.concesionario || 'Sin concesionario')} · ${this.escapeHtml(user.email || 'Sin email')}</small>
+                </span>
+                <span class="material-icons-round training-add-check" aria-hidden="true">check_circle</span>
+            </label>`;
+        }).join('');
+    },
+
+    toggleTrainingAddPicker(button) {
+        const picker = document.getElementById('tg-add-picker');
+        if (!picker) return;
+        const open = picker.hidden;
+        picker.hidden = !open;
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        button.classList.toggle('is-active', open);
+        const icon = button.querySelector('.material-icons-round');
+        const label = button.querySelector('.training-add-toggle-label');
+        if (icon) icon.textContent = open ? 'expand_less' : 'person_add';
+        if (label) label.textContent = open ? 'Cerrar selector' : 'Añadir comerciales';
+        if (open) document.getElementById('tg-add-search')?.focus();
+    },
+
+    filterTrainingAddCandidates(value) {
+        const query = (value || '').trim().toLowerCase();
+        const rows = [...document.querySelectorAll('[data-add-candidate-row]')];
+        let visible = 0;
+        rows.forEach(row => {
+            const matches = !query || (row.dataset.search || '').includes(query);
+            row.hidden = !matches;
+            if (matches) visible++;
+        });
+        const empty = document.getElementById('tg-add-search-empty');
+        if (empty) empty.hidden = visible > 0;
+    },
+
+    updateTrainingAddSelection(checkbox) {
+        checkbox.closest('[data-add-candidate-row]')?.classList.toggle('is-selected', checkbox.checked);
+        const selectedCount = document.querySelectorAll('[data-add-participant]:checked').length;
+        const count = document.getElementById('tg-add-count');
+        if (count) count.textContent = String(selectedCount);
+    },
+
+    collectTrainingParticipantAdditions() {
+        return [...document.querySelectorAll('[data-add-participant]:checked')].map(input => String(input.value));
+    },
+
     async copyCommercialEmail(button) {
         const email = button?.dataset?.email || '';
         if (!email) return;
@@ -348,19 +514,38 @@ const _appTrainingGroups = {
     async editTrainingGroup(id) {
         const session = this.getTrainingSession(id);
         if (!session) return;
+        if (['Realizada', 'No Realizada'].includes(session.status)) {
+            await Swal.fire({ title: 'Formación finalizada', text: 'No se pueden editar ni desvincular participantes de una formación finalizada.', icon: 'info', background: '#1e293b', color: '#fff' });
+            return;
+        }
         let users = [];
         if (this.user?.role === 'admin') {
             try { users = await this.apiGetUsers(); } catch (e) { users = []; }
         }
-        const participantUsers = this.getTrainingSessionParticipants(session).map(item => item.user).filter(Boolean);
-        const participantDealers = [...new Set(participantUsers.map(user => user.concesionario || 'Sin concesionario'))];
-        const participantsHtml = this.getTrainingParticipantsModalHtml(participantUsers);
+        const participantItems = this.getTrainingSessionParticipants(session);
+        const participantDealers = [...new Set(participantItems.map(item => item.user?.concesionario || 'Sin concesionario'))];
+        const defaultResponsible = session.confirmedBy || this.user?.username || '';
+        const participantsHtml = this.getEditableTrainingParticipantsModalHtml(participantItems, users, defaultResponsible);
+        const addCandidates = this.getTrainingGroupAddCandidates(session, participantItems);
+        const addCandidatesHtml = this.getTrainingAddCandidatesHtml(addCandidates);
         const result = await Swal.fire({
             title: 'Editar formación grupal',
             html: `<div class="training-form-layout">
                 <section class="training-form-section">
-                    <div class="training-form-heading"><span class="material-icons-round">groups</span><div><strong>Participantes</strong><small>${participantUsers.length} asesores · ${participantDealers.length} concesionarios · pulsa el icono para copiar el email</small></div></div>
-                    <div class="training-participants-list">${participantsHtml}</div>
+                    <div class="training-participant-section-heading">
+                        <div class="training-form-heading"><span class="material-icons-round">groups</span><div><strong>Participantes</strong><small>${participantItems.length} asesores · ${participantDealers.length} concesionarios · los cambios se aplicarán al guardar</small></div></div>
+                        <button type="button" class="training-add-toggle" onclick="app.toggleTrainingAddPicker(this)" aria-expanded="false" aria-controls="tg-add-picker" ${addCandidates.length ? '' : 'disabled'} title="${addCandidates.length ? 'Seleccionar comerciales pendientes' : 'No hay comerciales pendientes compatibles'}">
+                            <span class="material-icons-round">person_add</span><span class="training-add-toggle-label">Añadir comerciales</span><span id="tg-add-count" class="training-add-count">0</span>
+                        </button>
+                    </div>
+                    <div id="tg-add-picker" class="training-add-picker" hidden>
+                        <label for="tg-add-search">Buscar comerciales pendientes</label>
+                        <div class="training-add-search-wrap"><span class="material-icons-round">search</span><input id="tg-add-search" type="search" class="custom-field" placeholder="Nombre, concesionario o email" autocomplete="off" oninput="app.filterTrainingAddCandidates(this.value)"></div>
+                        <div class="training-add-candidates">${addCandidatesHtml}</div>
+                        <div id="tg-add-search-empty" class="training-add-empty" hidden>No hay coincidencias para esta búsqueda.</div>
+                        <small>Los seleccionados heredarán la fecha, modalidad, responsable y estado de la sesión.</small>
+                    </div>
+                    <div class="training-participants-list is-editable">${participantsHtml}</div>
                 </section>
                 <section class="training-form-section training-form-grid">
                     <label class="training-field training-field-full"><span>Nombre *</span><input id="tg-title" class="custom-field" value="${this.escapeAttr(session.title)}"></label>
@@ -374,8 +559,9 @@ const _appTrainingGroups = {
                     <label class="training-field training-field-full"><span>Mensaje *</span><textarea id="tg-body" class="custom-field training-email-body">${this.escapeHtml(session.emailBody || '')}</textarea></label>
                 </section>
             </div>`,
-            width: 720, background: '#1e293b', color: '#fff', showCancelButton: true,
+            width: 840, background: '#1e293b', color: '#fff', showCancelButton: true,
             confirmButtonText: 'Guardar cambios', cancelButtonText: 'Cancelar', confirmButtonColor: '#6366f1', focusConfirm: false,
+            customClass: { popup: 'training-group-modal' },
             didOpen: () => this.bindTrainingEmailFormSync(),
             preConfirm: () => {
                 this.syncTrainingEmailBodyFromForm();
@@ -394,15 +580,55 @@ const _appTrainingGroups = {
                     Swal.showValidationMessage('Completa todos los campos obligatorios.');
                     return false;
                 }
+                const participantResult = this.collectTrainingParticipantActions();
+                if (participantResult.error) {
+                    Swal.showValidationMessage(participantResult.error);
+                    participantResult.field?.focus?.();
+                    return false;
+                }
+                form.participantActions = participantResult.actions;
+                form.participantIdsToAdd = this.collectTrainingParticipantAdditions();
                 return form;
             }
         });
         if (!result.isConfirmed) return;
         try {
-            await this.apiUpdateTrainingSession(id, result.value);
+            Swal.fire({ title: 'Guardando cambios...', allowOutsideClick: false, background: '#1e293b', color: '#fff', didOpen: () => Swal.showLoading() });
+            const updateResult = await this.apiUpdateTrainingSession(id, result.value);
             await this.refreshTrainingData();
-            this.logAction('EDITAR_FORMACION_GRUPAL', session.title);
-            await Swal.fire({ title: 'Cambios guardados', icon: 'success', timer: 1600, showConfirmButton: false, background: '#1e293b', color: '#fff' });
+            const savedTitle = result.value.title || session.title;
+            this.logAction('EDITAR_FORMACION_GRUPAL', savedTitle);
+            (updateResult.detached || []).forEach(action => {
+                const participant = participantItems.find(item => String(item.meta.recordId) === String(action.recordId));
+                const name = participant?.user ? `${participant.user.nombre} ${participant.user.apellidos}` : `Registro ${action.recordId}`;
+                const destination = action.action === 'reschedule' ? 'reagendado como Convocada' : 'devuelto a Pendiente';
+                this.logAction('DESVINCULAR_FORMACION_GRUPAL', `${name} — ${destination}`);
+            });
+            (updateResult.addedRecordIds || []).forEach(recordId => {
+                const candidate = addCandidates.find(user => String(user.id) === String(recordId));
+                const name = candidate ? `${candidate.nombre} ${candidate.apellidos}` : `Registro ${recordId}`;
+                this.logAction('AÑADIR_FORMACION_GRUPAL', `${name} — ${savedTitle}`);
+            });
+            if (updateResult.convertedRecordId) {
+                const participant = participantItems.find(item => String(item.meta.recordId) === String(updateResult.convertedRecordId));
+                const addedParticipant = addCandidates.find(user => String(user.id) === String(updateResult.convertedRecordId));
+                const name = participant?.user
+                    ? `${participant.user.nombre} ${participant.user.apellidos}`
+                    : addedParticipant ? `${addedParticipant.nombre} ${addedParticipant.apellidos}` : `Registro ${updateResult.convertedRecordId}`;
+                this.logAction('CONVERTIR_FORMACION_GRUPAL_A_INDIVIDUAL', `${savedTitle} — ${name}`);
+            }
+            const detachedCount = updateResult.detached?.length || 0;
+            const addedCount = updateResult.addedRecordIds?.length || 0;
+            const changes = [];
+            if (addedCount) changes.push(`${addedCount} comercial${addedCount === 1 ? '' : 'es'} añadido${addedCount === 1 ? '' : 's'}`);
+            if (detachedCount) changes.push(`${detachedCount} comercial${detachedCount === 1 ? '' : 'es'} desvinculado${detachedCount === 1 ? '' : 's'}`);
+            let message = updateResult.session === null
+                ? 'La sesión grupal se ha convertido o disuelto correctamente.'
+                : changes.length ? `${changes.join(' y ')}.` : '';
+            if (addedCount && session.invitationSentAt && updateResult.session) {
+                message += ' La convocatoria queda pendiente de reenviar con los nuevos destinatarios.';
+            }
+            await Swal.fire({ title: 'Cambios guardados', text: message, icon: 'success', timer: 2200, showConfirmButton: false, background: '#1e293b', color: '#fff' });
         } catch (error) {
             await Swal.fire({ title: 'No se pudo guardar', text: error.message, icon: 'error', background: '#1e293b', color: '#fff' });
         }

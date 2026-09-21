@@ -53,6 +53,30 @@ const _appUtils = {
         return d.toISOString().slice(0, 16);
     },
 
+    parseLocalDate(value, endOfDay = false) {
+        if (!value) return null;
+        const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+        const date = dateOnly
+            ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+            : new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        if (dateOnly) date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+        return date;
+    },
+
+    getInclusiveDateRange(startValue, endValue) {
+        const start = this.parseLocalDate(startValue);
+        const end = this.parseLocalDate(endValue, true);
+        if (!start || !end) throw new Error('Selecciona un rango de fechas válido.');
+        if (start > end) throw new Error('La fecha inicial no puede ser posterior a la fecha final.');
+        return { start, end };
+    },
+
+    isDateInRange(value, start, end) {
+        const date = this.parseLocalDate(value);
+        return !!date && date >= start && date <= end;
+    },
+
     getTimeFromDate(iso) {
         if (!iso || !iso.includes('T')) return '--:--';
         return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
